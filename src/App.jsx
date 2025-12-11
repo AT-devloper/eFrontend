@@ -1,9 +1,23 @@
-import Hellocomponent from "./components/Hellocomponent";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 function App() {
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    axios.get("http://localhost:8080/api/hello")
+      .then(response => {
+        setMessage(response.data);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+  }, []);
+
   return (
     <div>
-      <Hellocomponent />
+      <h1>Spring Boot + React + Axios</h1>
+      <p>{message}</p>
     </div>
   );
 }
