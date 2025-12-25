@@ -1,25 +1,9 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
+import React from "react";
+import RegisterForm from "./components/RegisterForm";
 
 function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    axios.get("http://localhost:8080/api/hello")
-      .then(response => {
-        setMessage(response.data);
-      })
-      .catch(error => {
-        console.error(error);
-      });
-  }, []);
-
-  return (
-    <div>
-      <h1>Spring Boot + React + Axios</h1>
-      <p>{message}</p>
-    </div>
-  );
+  return <RegisterForm />;
 }
 
 export default App;
+
