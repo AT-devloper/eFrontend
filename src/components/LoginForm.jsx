@@ -1,30 +1,46 @@
-import { useState } from "react";
-import ForgotPassword from "./ForgotPassword";
+import React, { useState } from "react";
+import API from "../API/axiosInstance";
 
-function Login() {
-  const [showForgot, setShowForgot] = useState(false);
+const LoginForm = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.post("/auth/login", { email, password });
+      localStorage.setItem("token", res.data);
+      setMessage("✅ Login successful");
+    } catch (err) {
+      setMessage(err.response?.data || "❌ Login failed");
+    }
+  };
 
   return (
-    <>
-      {!showForgot ? (
-        <>
-          <h2>Login</h2>
-          <input placeholder="Username" />
-          <input type="password" placeholder="Password" />
-          <button>Login</button>
+    <form onSubmit={handleLogin}>
+      <h2>Login</h2>
 
-          <p
-            style={{ color: "blue", cursor: "pointer" }}
-            onClick={() => setShowForgot(true)}
-          >
-            Forgot Password?
-          </p>
-        </>
-      ) : (
-        <ForgotPassword onBack={() => setShowForgot(false)} />
-      )}
-    </>
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      /><br /><br />
+
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      /><br /><br />
+
+      <button type="submit">Login</button>
+      <p>{message}</p>
+    </form>
   );
-}
+};
 
-export default Login;
+export default LoginForm;

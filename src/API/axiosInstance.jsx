@@ -9,16 +9,20 @@ const API = axios.create({
 });
 
 // 2️⃣ Request interceptor to add Authorization token automatically
-API.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token"); // Get token from localStorage
+API.interceptors.request.use((config) => {
+  const publicEndpoints = ["/auth/send-otp", "/auth/validate-otp", "/auth/reset-password"];
+  
+  // Only add token if endpoint is NOT public
+  if (!publicEndpoints.includes(config.url)) {
+    const token = localStorage.getItem("token");
     if (token) {
-      config.headers["Authorization"] = `Bearer ${token}`; // Add token to headers
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+  }
+
+  return config;
+}, (error) => Promise.reject(error));
+
 
 // 3️⃣ Response interceptor (optional for error handling)
 API.interceptors.response.use(

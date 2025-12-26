@@ -2,12 +2,11 @@ import React, { useState } from "react";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
 
-const AuthPage = () => {
-  const [mode, setMode] = useState("login"); // login | register
+const AuthPage = ({ onSuccess }) => {
+  const [mode, setMode] = useState("login");
 
   return (
     <div style={{ width: 450, margin: "auto" }}>
-      {/* TOGGLE */}
       <div style={{ display: "flex", marginBottom: 20 }}>
         <button
           onClick={() => setMode("login")}
@@ -36,8 +35,11 @@ const AuthPage = () => {
         </button>
       </div>
 
-      {/* FORMS */}
-      {mode === "login" ? <LoginForm /> : <RegisterForm />}
+      {mode === "login" ? (
+        <LoginForm onSuccess={onSuccess} />
+      ) : (
+        <RegisterForm />
+      )}
     </div>
   );
 };

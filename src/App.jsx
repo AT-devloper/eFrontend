@@ -1,12 +1,5 @@
-import React from "react";
-import AuthPage from "./components/AuthPage";
-
-function App() {
-  return (
-    <div>
-      <AuthPage />
-    </div>
-  );
-}
+// Optional placeholder or wrapper if needed
+const App = () => <></>;
 
 export default App;
+

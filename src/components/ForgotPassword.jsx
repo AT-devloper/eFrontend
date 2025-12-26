@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function ForgotPassword({ onBack }) {
+const ForgotPassword = () => {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState("");
@@ -14,13 +14,12 @@ function ForgotPassword({ onBack }) {
       `/auth/forgot-password/send-otp?email=${email}`,
       { method: "POST" }
     );
-
     const text = await res.text();
     setMessage(text);
     setStep(2);
   };
 
-  // STEP 2 + 3: Validate OTP & Reset Password
+  // STEP 2: Validate OTP + Reset Password
   const resetPassword = async () => {
     const otpRes = await fetch(
       `/auth/forgot-password/validate-otp?userId=${userId}&otp=${otp}`,
@@ -42,18 +41,20 @@ function ForgotPassword({ onBack }) {
   };
 
   return (
-    <div style={styles.box}>
-      <h2>Forgot Password</h2>
+    <div style={{ maxWidth: "400px", margin: "auto" }}>
+      <h3>Forgot Password</h3>
+
       {message && <p>{message}</p>}
 
       {step === 1 && (
         <>
           <input
             type="email"
-            placeholder="Registered Email"
+            placeholder="Enter email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          <br /><br />
           <button onClick={sendOtp}>Send OTP</button>
         </>
       )}
@@ -66,13 +67,15 @@ function ForgotPassword({ onBack }) {
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
           />
+          <br /><br />
 
           <input
             type="text"
-            placeholder="OTP"
+            placeholder="Enter OTP"
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
           />
+          <br /><br />
 
           <input
             type="password"
@@ -80,32 +83,13 @@ function ForgotPassword({ onBack }) {
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
           />
+          <br /><br />
 
           <button onClick={resetPassword}>Reset Password</button>
         </>
       )}
-
-      <p style={styles.link} onClick={onBack}>
-        Back to Login
-      </p>
     </div>
   );
-}
-
-const styles = {
-  box: {
-    width: "350px",
-    margin: "100px auto",
-    padding: "20px",
-    border: "1px solid #ccc",
-    borderRadius: "6px",
-    textAlign: "center"
-  },
-  link: {
-    marginTop: "10px",
-    color: "blue",
-    cursor: "pointer"
-  }
 };
 
 export default ForgotPassword;
