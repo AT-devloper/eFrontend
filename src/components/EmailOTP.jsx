@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import API from "../API Configuration/api";
+import API from "../API/axiosInstance";
 
 const EmailOTP = ({ email, onVerified }) => {
   const [otp, setOtp] = useState("");

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import API from "../API Configuration/api";
+import API from "../API/axiosInstance";
 
 const PhoneOTP = ({ phone, onVerified }) => {
   const [otp, setOtp] = useState("");
