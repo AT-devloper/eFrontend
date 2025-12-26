@@ -1,9 +1,11 @@
-import React from "react";
-import RegisterForm from "./components/RegisterForm";
+import AuthForm from "./Forms/AuthForm";
 
 function App() {
-  return <RegisterForm />;
+  return (
+    <div>
+      <AuthForm />
+    </div>
+  );
 }
 
 export default App;
-

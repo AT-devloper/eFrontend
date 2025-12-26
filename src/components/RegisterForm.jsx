@@ -21,7 +21,7 @@ const RegisterForm = () => {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // 🔁 Reset
+  // 🔁 Reset everything
   const resetForm = () => {
     setFormData({ email: "", username: "", phone: "", password: "" });
     setEmailOtp("");
@@ -32,20 +32,20 @@ const RegisterForm = () => {
     setMessage("");
   };
 
-  // 📩 SEND OTP (calls /auth/register)
+  // 📩 SEND OTP (register API)
   const sendOtp = async () => {
     try {
       await API.post("/auth/register", formData);
       setOtpSent(true);
       setMessage("📨 OTP sent to Email & Phone");
     } catch (err) {
-      setMessage(err.response?.data || "Failed to send OTP");
+      setMessage(err.response?.data || "❌ Failed to send OTP");
     }
   };
 
-  // ✅ Auto verify email OTP
+  // ✅ Auto verify Email OTP
   useEffect(() => {
-    if (emailOtp.length === 6 && !emailVerified) {
+    if (emailOtp.length === 6 && otpSent && !emailVerified) {
       API.post("/auth/verify/email", null, {
         params: { email: formData.email, otp: emailOtp },
       })
@@ -53,13 +53,16 @@ const RegisterForm = () => {
           setEmailVerified(true);
           setMessage("✅ Email verified");
         })
-        .catch(() => setMessage("❌ Invalid Email OTP"));
+        .catch(() => {
+          setMessage("❌ Invalid Email OTP");
+          setEmailOtp("");
+        });
     }
   }, [emailOtp]);
 
-  // ✅ Auto verify phone OTP
+  // ✅ Auto verify Phone OTP
   useEffect(() => {
-    if (phoneOtp.length === 6 && !phoneVerified) {
+    if (phoneOtp.length === 6 && otpSent && !phoneVerified) {
       API.post("/auth/verify/phone", null, {
         params: { phone: formData.phone, otp: phoneOtp },
       })
@@ -67,7 +70,10 @@ const RegisterForm = () => {
           setPhoneVerified(true);
           setMessage("✅ Phone verified");
         })
-        .catch(() => setMessage("❌ Invalid Phone OTP"));
+        .catch(() => {
+          setMessage("❌ Invalid Phone OTP");
+          setPhoneOtp("");
+        });
     }
   }, [phoneOtp]);
 
@@ -82,6 +88,7 @@ const RegisterForm = () => {
         placeholder="Email"
         value={formData.email}
         onChange={handleChange}
+        disabled={otpSent}
       /><br /><br />
 
       <input
@@ -90,6 +97,7 @@ const RegisterForm = () => {
         placeholder="Username"
         value={formData.username}
         onChange={handleChange}
+        disabled={otpSent}
       /><br /><br />
 
       <input
@@ -98,6 +106,7 @@ const RegisterForm = () => {
         placeholder="Phone"
         value={formData.phone}
         onChange={handleChange}
+        disabled={otpSent}
       /><br /><br />
 
       <input
@@ -106,6 +115,7 @@ const RegisterForm = () => {
         placeholder="Password"
         value={formData.password}
         onChange={handleChange}
+        disabled={otpSent}
       /><br /><br />
 
       {/* BUTTONS */}
@@ -127,10 +137,12 @@ const RegisterForm = () => {
             maxLength={6}
             placeholder="Enter Email OTP"
             value={emailOtp}
-            onChange={(e) => setEmailOtp(e.target.value)}
+            onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
           />
         </>
       )}
+      {/* STATUS MESSAGES */}
+{emailVerified && !phoneVerified && <p>✅ Email Verified</p>}
 
       {/* PHONE OTP */}
       {otpSent && !phoneVerified && (
@@ -141,10 +153,12 @@ const RegisterForm = () => {
             maxLength={6}
             placeholder="Enter Phone OTP"
             value={phoneOtp}
-            onChange={(e) => setPhoneOtp(e.target.value)}
+            onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ""))}
           />
         </>
       )}
+      {/* STATUS MESSAGES */}
+      {phoneVerified && !emailVerified && <p>✅ Phone Verified</p>}
 
       {/* FINAL SUCCESS */}
       {emailVerified && phoneVerified && (
