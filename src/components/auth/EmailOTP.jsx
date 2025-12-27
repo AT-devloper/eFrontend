@@ -1,39 +1,33 @@
 import React, { useState, useEffect } from "react";
-import API from "../API/axiosInstance";
+import { sendEmailOtp, verifyEmailOtp } from "../../services/AuthService";
 
 const EmailOTP = ({ email, onVerified }) => {
   const [otp, setOtp] = useState("");
   const [msg, setMsg] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
 
-  // Send OTP to email
-  const sendEmailOtp = async () => {
+  const handleSendOtp = async () => {
     try {
-      await API.post("/auth/send-email-otp", null, { params: { email } });
+      await sendEmailOtp(email);
       setMsg("Email OTP sent!");
     } catch {
       setMsg("Failed to send Email OTP");
     }
   };
 
-  // Auto verify when 6 digits are entered
   useEffect(() => {
-    if (otp.length === 6) {
-      verifyEmailOtp();
-    }
+    if (otp.length === 6) handleVerifyOtp();
   }, [otp]);
 
-  // Verify OTP
-  const verifyEmailOtp = async () => {
+  const handleVerifyOtp = async () => {
     try {
-      const res = await API.post("/auth/verify/email", null, {
-        params: { email, otp },
-      });
-      setMsg(res.data);
+      await verifyEmailOtp(email, otp);
       setEmailVerified(true);
-      if (onVerified) onVerified(); // notify parent
+      setMsg("✅ Email Verified");
+      if (onVerified) onVerified();
     } catch {
-      setMsg("Invalid Email OTP");
+      setMsg("❌ Invalid Email OTP");
+      setOtp("");
     }
   };
 
@@ -44,7 +38,7 @@ const EmailOTP = ({ email, onVerified }) => {
         <p>✅ Email Verified</p>
       ) : (
         <>
-          <button onClick={sendEmailOtp}>Send Email OTP</button><br /><br />
+          <button onClick={handleSendOtp}>Send Email OTP</button><br /><br />
           <input
             type="text"
             placeholder="Enter Email OTP"

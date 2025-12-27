@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import API from "../API/axiosInstance";
+import { login } from "../../services/AuthService";
 
 const AnyLogin = ({ setToken, setMessage, loginType = "email" }) => {
   const [identifier, setIdentifier] = useState("");
@@ -8,18 +8,12 @@ const AnyLogin = ({ setToken, setMessage, loginType = "email" }) => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const payload = { password };
-
-      if (loginType === "email") payload.email = identifier;
-      else if (loginType === "phone") payload.phone = identifier;
-      else if (loginType === "username") payload.username = identifier;
-
-      const res = await API.post("/auth/login", payload);
-      localStorage.setItem("token", res.data);
-      setToken(res.data);
-      setMessage(`✅ ${loginType} login successful!`);
+      const token = await login({ identifier, password, loginType });
+      localStorage.setItem("token", token);
+      setToken && setToken(token);
+      setMessage && setMessage(`✅ ${loginType} login successful!`);
     } catch (err) {
-      setMessage(err.response?.data || "❌ Login failed");
+      setMessage && setMessage(err.response?.data || "❌ Login failed");
     }
   };
 
@@ -43,9 +37,7 @@ const AnyLogin = ({ setToken, setMessage, loginType = "email" }) => {
           required
           style={styles.input}
         />
-        <button type="submit" style={styles.button}>
-          Login
-        </button>
+        <button type="submit" style={styles.button}>Login</button>
       </form>
     </div>
   );
@@ -55,14 +47,7 @@ const styles = {
   container: { padding: 20, border: "1px solid #ccc", borderRadius: 5 },
   form: { display: "flex", flexDirection: "column", gap: 10 },
   input: { padding: 10, fontSize: 16 },
-  button: {
-    padding: 10,
-    fontSize: 16,
-    cursor: "pointer",
-    backgroundColor: "#1976d2",
-    color: "white",
-    border: "none",
-  },
+  button: { padding: 10, fontSize: 16, cursor: "pointer", backgroundColor: "#1976d2", color: "white", border: "none" },
 };
 
 export default AnyLogin;

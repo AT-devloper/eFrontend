@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import API from "../API/axiosInstance";
+import { googleLogin } from "../../services/AuthService";
 
 const GoogleLogin = ({ googleClientId, setToken, setMessage }) => {
   useEffect(() => {
@@ -21,6 +21,7 @@ const GoogleLogin = ({ googleClientId, setToken, setMessage }) => {
           client_id: googleClientId,
           callback: handleGoogleLogin,
         });
+
         google.accounts.id.renderButton(
           document.getElementById("google-login-button"),
           { theme: "outline", size: "large", width: 300 }
@@ -30,9 +31,9 @@ const GoogleLogin = ({ googleClientId, setToken, setMessage }) => {
 
     const handleGoogleLogin = async (response) => {
       try {
-        const res = await API.post("/auth/google", { idToken: response.credential });
-        localStorage.setItem("token", res.data);
-        setToken(res.data);
+        const data = await googleLogin(response.credential);
+        localStorage.setItem("token", data.token || data); // support both formats
+        setToken && setToken(data.token || data);
         setMessage("✅ Google login successful!");
       } catch (err) {
         setMessage(err.response?.data || "❌ Google login failed");

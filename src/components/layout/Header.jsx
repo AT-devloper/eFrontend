@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Navbar, Nav, Container, Button, Modal } from "react-bootstrap";
-import AuthPage from "./AuthPage";
+import AuthForm from "../../Forms/AuthForm";
 
 const Header = () => {
   const [showAuth, setShowAuth] = useState(false);
@@ -44,7 +44,7 @@ const Header = () => {
         </Modal.Header>
 
         <Modal.Body>
-          <AuthPage />
+          <AuthForm />
         </Modal.Body>
       </Modal>
     </>

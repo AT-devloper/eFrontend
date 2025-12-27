@@ -1,39 +1,33 @@
 import React, { useState, useEffect } from "react";
-import API from "../API/axiosInstance";
+import { sendPhoneOtp, verifyPhoneOtp } from "../../services/AuthService";
 
 const PhoneOTP = ({ phone, onVerified }) => {
   const [otp, setOtp] = useState("");
   const [msg, setMsg] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
 
-  // Send OTP to phone
-  const sendPhoneOtp = async () => {
+  const handleSendOtp = async () => {
     try {
-      await API.post("/auth/send-phone-otp", null, { params: { phone } });
+      await sendPhoneOtp(phone);
       setMsg("Phone OTP sent!");
     } catch {
       setMsg("Failed to send Phone OTP");
     }
   };
 
-  // Auto verify when 6 digits entered
   useEffect(() => {
-    if (otp.length === 6) {
-      verifyPhoneOtp();
-    }
+    if (otp.length === 6) handleVerifyOtp();
   }, [otp]);
 
-  // Verify OTP
-  const verifyPhoneOtp = async () => {
+  const handleVerifyOtp = async () => {
     try {
-      const res = await API.post("/auth/verify/phone", null, {
-        params: { phone, otp },
-      });
-      setMsg(res.data);
+      await verifyPhoneOtp(phone, otp);
       setPhoneVerified(true);
-      if (onVerified) onVerified(); // notify parent
+      setMsg("✅ Phone Verified");
+      if (onVerified) onVerified();
     } catch {
-      setMsg("Invalid Phone OTP");
+      setMsg("❌ Invalid Phone OTP");
+      setOtp("");
     }
   };
 
@@ -44,7 +38,7 @@ const PhoneOTP = ({ phone, onVerified }) => {
         <p>✅ Phone Verified</p>
       ) : (
         <>
-          <button onClick={sendPhoneOtp}>Send Phone OTP</button><br /><br />
+          <button onClick={handleSendOtp}>Send Phone OTP</button><br /><br />
           <input
             type="text"
             placeholder="Enter Phone OTP"
