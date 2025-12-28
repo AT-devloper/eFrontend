@@ -1,9 +1,7 @@
-const Footer = () => {
+export default function Footer() {
   return (
     <footer className="footer">
-      <p>© {new Date().getFullYear()} AT. All rights reserved.</p>
+      © 2025 Elegance Jewellery
     </footer>
   );
-};
-
-export default Footer;
+}

@@ -1,14 +1,12 @@
-
 import { Routes, Route } from "react-router-dom";
-import Home from "../Pages/Home";
+import Home from "../pages/Home";
 import Products from "../pages/Products";
-const AppRoutes = () => {
+
+export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/products" element={<Products />} />
     </Routes>
   );
-};
-
-export default AppRoutes;
+}
