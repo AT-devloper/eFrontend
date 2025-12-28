@@ -1,26 +1,20 @@
-import ProductCard from "../components/ProductCard";
+import React from "react";
 
-const products = [
-  {
-    id: 1,
-    name: "Gold Necklace",
-    price: "89,999",
-    image: "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d"
-  },
-  {
-    id: 2,
-    name: "Diamond Ring",
-    price: "1,25,000",
-    image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f"
-  }
-];
-
-export default function Products() {
+export default function ProductCard({ product }) {
   return (
-    <section className="products">
-      {products.map(p => (
-        <ProductCard key={p.id} product={p} />
-      ))}
-    </section>
+    <div className="card h-100 text-center">
+      <img
+        src={product.image}
+        className="card-img-top"
+        alt={product.name}
+      />
+      <div className="card-body d-flex flex-column">
+        <h5 className="card-title">{product.name}</h5>
+        <p className="price">₹ {product.price}</p>
+        <a href="#" className="btn btn-buy mt-auto">
+          Buy
+        </a>
+      </div>
+    </div>
   );
 }

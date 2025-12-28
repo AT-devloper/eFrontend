@@ -1,159 +1,307 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500&display=swap');
 
 :root {
-  --gold: #b2965a;
-  --dark: #2b2b2b;
-  --light: #faf8f5;
-  --white: #ffffff;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  --gold: #c9a24d;
+  --maroon: #6b1f2b;
+  --ivory: #f2fbf5;
+  --dark: #2a2a2a;
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--light);
+  background-color: var(--ivory);
   color: var(--dark);
+  padding-top: 80px;
 }
 
-h1, h2, h3 {
+h1, h2, h3, .navbar-brand {
   font-family: 'Playfair Display', serif;
-  font-weight: 600;
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
+.scroll-indicator {
+  position: absolute;
+  bottom: 30px;
+  width: 24px;
+  height: 40px;
+  border: 2px solid white;
+  border-radius: 20px;
 }
 
-/* =========================
+.scroll-indicator::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: scroll 1.5s infinite;
+}
+
+@keyframes scroll {
+  0% { opacity: 0; transform: translate(-50%, 0); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 14px); }
+}
+
+
+/* ======================
+   TEXT & BUTTONS
+====================== */
+.text-gold {
+  color: var(--gold);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), #e3c26b);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.8rem;
+}
+
+.btn-gold:hover {
+  opacity: 0.95;
+}
+
+/* ======================
    NAVBAR
-========================= */
+====================== */
 .navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 3rem;
-  background: var(--white);
-  border-bottom: 1px solid #eee;
+  transition: all 0.3s ease;
+  padding: 1.2rem 0;
 }
 
-.logo {
-  color: var(--gold);
-  letter-spacing: 3px;
-  font-size: 1.5rem;
+.navbar.scrolled {
+  background: white !important;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  padding: 0.6rem 0;
 }
 
-.links a {
-  margin-left: 2rem;
+.nav-link {
   font-weight: 500;
-  transition: color 0.3s;
 }
 
-.links a:hover {
-  color: var(--gold);
+.nav-link:hover {
+  color: var(--maroon) !important;
 }
 
-/* =========================
-   HOME PAGE
-========================= */
+.navbar-brand {
+  letter-spacing: 4px;
+  color: var(--maroon) !important;
+}
+
+/* ======================
+   HERO (WEDDING LOOK)
+====================== */
 .hero {
-  padding: 5rem 2rem;
+  min-height: 100vh; /* FULL SCREEN */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  background: linear-gradient(
+      rgba(107,31,43,0.6),
+      rgba(107,31,43,0.6)
+    ),
+    url("https://images.unsplash.com/photo-1617038260897-41a1f14d1c49");
+
+  background-size: cover;
+  background-position: center;
+  color: white;
   text-align: center;
+  padding: 2rem;
 }
 
 .hero h1 {
-  font-size: 3rem;
+  font-size: 3.5rem;
 }
 
 .hero p {
-  margin: 1.5rem 0;
-  font-size: 1.1rem;
-  color: #555;
+  font-size: 1.3rem;
+  max-width: 600px;
 }
 
-.hero-btn {
-  padding: 0.8rem 2.5rem;
-  background: var(--gold);
-  color: var(--white);
-  border-radius: 4px;
-  display: inline-block;
-  margin-top: 1rem;
-  transition: opacity 0.3s;
+.hero-carousel,
+.hero-slide {
+  min-height: 100vh;
 }
 
-.hero-btn:hover {
-  opacity: 0.9;
-}
-
-/* =========================
-   PRODUCTS PAGE
-========================= */
-.products {
-  padding: 4rem 3rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2.5rem;
-}
-
-/* =========================
-   PRODUCT CARD
-========================= */
-.card {
-  background: var(--white);
-  padding: 1.5rem;
-  border-radius: 6px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.05);
+.hero-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
-  transition: transform 0.3s ease;
+  color: white;
+  padding: 2rem;
+}
+
+.slide1 {
+  background: linear-gradient(rgba(107,31,43,0.6), rgba(107,31,43,0.6)),
+    url("https://images.unsplash.com/photo-1617038260897-41a1f14d1c49");
+}
+
+.slide2 {
+  background: linear-gradient(rgba(107,31,43,0.6), rgba(107,31,43,0.6)),
+    url("https://images.unsplash.com/photo-1600180758890-6b94519a8ba6");
+}
+
+.slide3 {
+  background: linear-gradient(rgba(107,31,43,0.6), rgba(107,31,43,0.6)),
+    url("https://images.unsplash.com/photo-1605100804763-247f67b3557e");
+}
+
+.slide1, .slide2, .slide3 {
+  background-size: cover;
+  background-position: center;
+}
+
+.hero-slide h1 {
+  font-size: 3.6rem;
+}
+
+.hero-slide p {
+  font-size: 1.3rem;
+  max-width: 600px;
+}
+
+/* ======================
+   Golden button {Collection}
+====================== */
+
+
+/* Subtle bounce & glow animation for hero button */
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), #e3c26b);
+  color: white;
+  border: none;
+  padding: 0.7rem 2rem;
+  font-size: 1.15rem;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+  animation: btn-bounce 2s infinite;
+}
+
+/* Glow effect */
+.btn-gold::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border-radius: 6px;
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.5), rgba(255, 255, 255, 0.3));
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
+}
+
+.btn-gold:hover::after {
+  opacity: 1;
+}
+
+/* Bounce keyframes */
+@keyframes btn-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+
+
+/* ======================
+   PRODUCT CARDS
+====================== */
+.card {
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .card:hover {
   transform: translateY(-6px);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.12);
 }
 
-.card img {
-  width: 100%;
-  height: 220px;
+.card-img-top {
+  height: 240px;
   object-fit: cover;
-  margin-bottom: 1rem;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-.card h3 {
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+/* ======================
+   Buy button
+====================== */
+
+.btn-buy {
+  background: linear-gradient(135deg, #d4af37, #e3c26b);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  transition: all 0.3s ease, box-shadow 0.3s ease;
 }
 
-.card p {
-  color: var(--gold);
-  font-weight: 500;
+.btn-buy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.25);
 }
 
-/* =========================
+.btn-buy {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-buy::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(45deg);
+  transition: all 0.5s;
+  opacity: 0;
+}
+
+.btn-buy:hover::before {
+  opacity: 1;
+  transform: rotate(45deg) translate(50%, 50%);
+}
+
+
+
+
+/* ======================
+   PRICE
+====================== */
+.price {
+  color: var(--maroon);
+  font-weight: 600;
+}
+
+/* ======================
    FOOTER
-========================= */
+====================== */
 .footer {
-  padding: 2rem;
-  text-align: center;
-  background: var(--white);
-  margin-top: 4rem;
+  background: white;
   border-top: 1px solid #eee;
-  font-size: 0.9rem;
+  color: #555;
 }
 
-/* =========================
+/* ======================
    RESPONSIVE
-========================= */
+====================== */
 @media (max-width: 768px) {
-  .navbar {
-    padding: 1rem 1.5rem;
-  }
-
   .hero h1 {
-    font-size: 2.3rem;
+    font-size: 2.4rem;
   }
 }

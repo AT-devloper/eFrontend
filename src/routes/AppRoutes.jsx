@@ -1,12 +1,13 @@
-import { Routes, Route } from "react-router-dom";
-import Home from "../pages/Home";
-import Products from "../pages/Products";
+import { Navigate, Routes, Route } from "react-router-dom";
+import ForgotPassword from "../components/ForgotPassword";
+import ResetPassword from "../components/ResetPassword";
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/products" element={<Products />} />
+      <Route path="/" element={<Navigate to="/forgot-password" />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 }
