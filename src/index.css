@@ -92,6 +92,24 @@ h1, h2, h3, .navbar-brand {
   color: var(--maroon) !important;
 }
 
+/* Navbar Login/Register Button Theme */
+.btn-nav-auth {
+  background: linear-gradient(135deg, var(--gold), #e3c26b);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 30px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-nav-auth:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+
 /* ======================
    HERO (WEDDING LOOK)
 ====================== */
@@ -304,4 +322,140 @@ h1, h2, h3, .navbar-brand {
   .hero h1 {
     font-size: 2.4rem;
   }
+}
+
+/* ======================
+   AUTH TOGGLE CARD
+====================== */
+.auth-card {
+  max-width: 400px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Toggle buttons */
+.auth-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-toggle button {
+  flex: 1;
+  padding: 0.6rem 1.2rem;
+  border-radius: 30px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--ivory);
+  color: var(--dark);
+}
+
+.auth-toggle button.active {
+  background: var(--maroon);
+  color: white;
+  box-shadow: 0 5px 15px rgba(107,31,43,0.3);
+}
+
+/* Form styling */
+/* Card */
+.auth-card {
+  max-width: 400px;
+  min-height: 600px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: var(--ivory);
+  border-radius: 12px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.08);
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  transition: height 0.3s ease;
+}
+
+/* Toggle Buttons */
+.auth-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: var(--ivory);
+  color: var(--dark);
+}
+
+.toggle-btn.active {
+  background-color: var(--maroon);
+  color: white;
+  border-color: var(--maroon);
+}
+
+.toggle-btn:hover:not(.active) {
+  background-color: #f5f5f5;
+}
+
+/* Form Container */
+.auth-form-container {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Active/Inactive forms */
+.auth-form-container > div {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  left: 0;
+  transition: opacity 0.3s ease;
+}
+
+.auth-form-container > .active-form {
+  opacity: 1;
+  position: relative;
+}
+
+.auth-form-container > .inactive-form {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Inputs/Buttons inside forms */
+.login-input, .border {
+  border: 1px solid #ccc;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.login-btn, .bg-blue-500, .bg-green-500 {
+  background-color: var(--gold);
+  color: white;
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover, .bg-blue-500:hover, .bg-green-500:hover {
+  opacity: 0.9;
 }

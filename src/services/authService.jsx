@@ -10,6 +10,7 @@ export const authService = {
     api.post(`/verify/phone?phone=${encodeURIComponent(phone)}&otp=${encodeURIComponent(otp)}`),
 
   login: (data) => api.post("/login", data),
+  
   googleLogin: (idToken) => api.post("/google", { idToken }),
 
   requestPasswordReset: (email) =>

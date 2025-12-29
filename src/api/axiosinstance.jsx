@@ -15,6 +15,7 @@ api.interceptors.request.use(
   "/register",
   "/verify/email",
   "/verify/phone",
+  "/google",
 ];
 
     if (!publicEndpoints.includes(config.url)) {

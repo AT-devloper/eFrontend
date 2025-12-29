@@ -1,13 +1,13 @@
-
+import AuthToggleCard from "./components/AuthToggleCard";
+import GoogleLoginButton from "./components/GoogleLoginButton";
 import AppRoutes from "./routes/AppRoutes";
 
-
-export default function App() {
+function App() {
   return (
-    <>
-     
-      <AppRoutes/>
-      
-    </>
+    <div>
+    <AppRoutes/>
+    </div>
   );
 }
+
+export default App;

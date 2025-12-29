@@ -1,31 +1,37 @@
 import React, { useState } from "react";
-import Login from "./Login";
-import Register from "./Register";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
+
 
 const AuthToggleCard = () => {
   const [activeTab, setActiveTab] = useState("login"); // 'login' or 'register'
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border rounded-md shadow-md">
-      {/* ================= TOGGLE BUTTONS ================= */}
-      <div className="flex justify-center mb-6 gap-4">
+    <div className="auth-card">
+      {/* Toggle Buttons */}
+      <div className="auth-toggle">
         <button
           onClick={() => setActiveTab("login")}
-          className={`py-2 px-4 rounded ${activeTab === "login" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          className={`toggle-btn ${activeTab === "login" ? "active" : ""}`}
         >
           Login
         </button>
         <button
           onClick={() => setActiveTab("register")}
-          className={`py-2 px-4 rounded ${activeTab === "register" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+          className={`toggle-btn ${activeTab === "register" ? "active" : ""}`}
         >
           Register
         </button>
       </div>
 
-      {/* ================= SHOW LOGIN OR REGISTER ================= */}
-      <div>
-        {activeTab === "login" ? <Login /> : <Register />}
+      {/* Forms */}
+      <div className="auth-form-container">
+        <div className={activeTab === "login" ? "active-form" : "inactive-form"}>
+          <Login />
+        </div>
+        <div className={activeTab === "register" ? "active-form" : "inactive-form"}>
+          <Register />
+        </div>
       </div>
     </div>
   );
