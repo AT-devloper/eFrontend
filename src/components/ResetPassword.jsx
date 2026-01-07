@@ -10,7 +10,7 @@ const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true); // ✅ show loading while verifying token
+  const [loading, setLoading] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
 
   useEffect(() => {
@@ -51,11 +51,11 @@ const ResetPassword = () => {
   };
 
   if (loading) return <p>Validating token...</p>;
-  if (!tokenValid) return <p>{message}</p>; // show error if token invalid
+  if (!tokenValid) return <p>{message}</p>;
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border rounded">
-      <h2 className="text-2xl font-bold mb-4">Reset Password</h2>
+    <div className="reset-card">
+      <h2>Reset Password</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           type="password"
@@ -63,7 +63,6 @@ const ResetPassword = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="border p-2 rounded"
         />
         <input
           type="password"
@@ -71,16 +70,18 @@ const ResetPassword = () => {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
-          className="border p-2 rounded"
         />
-        <button
-          type="submit"
-          className="bg-blue-500 text-white py-2 rounded"
-        >
-          Reset Password
-        </button>
+        <button type="submit">Reset Password</button>
       </form>
-      {message && <p className="mt-2 text-green-600">{message}</p>}
+      {message && (
+        <p
+          className={`reset-message ${
+            message.toLowerCase().includes("success") ? "success" : "error"
+          }`}
+        >
+          {message}
+        </p>
+      )}
     </div>
   );
 };
