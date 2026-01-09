@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // <-- import navigation
 import SellerLayout from "../../layouts/SellerLayout";
 import sellerApi from "../../api/sellerApi";
 
@@ -32,12 +31,17 @@ const steps = [
 
 const CreateProductPage = () => {
   const [activeStepIndex, setActiveStepIndex] = useState(0);
-  const navigate = useNavigate(); // <-- initialize navigation
 
+  // Full controlled state
   const [state, setState] = useState({
     categoryId: "",
     brandId: "",
-    productInfo: {},
+    productInfo: {
+      name: "",
+      description: "",
+      sku: "",
+      weight: "",
+    },
     attributes: {},
     variants: [],
     features: [],
@@ -46,14 +50,14 @@ const CreateProductPage = () => {
     thumbnailFile: null,
     images: [],
     productId: null,
-    isCompleted: false,
   });
 
-  const dispatch = (update) => setState((prev) => ({ ...prev, ...update }));
+  // Central dispatch function
+  const dispatch = (update) =>
+    setState((prev) => ({ ...prev, ...update }));
 
+  // Go to next step
   const goNext = async () => {
-    if (state.isCompleted) return;
-
     const currentStep = steps[activeStepIndex];
 
     try {
@@ -67,7 +71,8 @@ const CreateProductPage = () => {
           break;
 
         case "Product Information":
-          if (!state.productInfo.name) return alert("Enter product name!");
+          if (!state.productInfo.name)
+            return alert("Enter product name!");
           const productData = {
             categoryId: state.categoryId,
             brandId: state.brandId,
@@ -81,32 +86,43 @@ const CreateProductPage = () => {
           if (!state.attributes || Object.keys(state.attributes).length === 0)
             return alert("Select at least one attribute");
 
-          const attrPayload = Object.entries(state.attributes).map(([id, value]) => ({
-            attributeId: parseInt(id),
-            value,
-          }));
+          const attrPayload = Object.entries(state.attributes).map(
+            ([id, value]) => ({ attributeId: parseInt(id), value })
+          );
 
           await sellerApi.saveAttributes(state.productId, attrPayload);
           break;
 
         case "Variants":
-          if (!state.variants || state.variants.length === 0)
-            return alert("Add at least one variant");
+  if (!state.variants || state.variants.length === 0)
+    return alert("Add at least one variant");
 
-          const createdVariants = [];
-          for (const variant of state.variants) {
-            const payload = {
-              sku: variant.sku,
-              attributes: Object.entries(state.attributes).map(([id, value]) => ({
-                attributeId: parseInt(id),
-                value,
-              })),
-            };
-            const v = await sellerApi.createVariant(state.productId, payload);
-            createdVariants.push(v.id ? v : variant);
-          }
-          dispatch({ variants: createdVariants });
-          break;
+  const createdVariants = [];
+  for (const variant of state.variants) {
+    const payload = {
+      sku: variant.sku,
+      attributes: Object.entries(state.attributes).map(
+        ([id, value]) => ({ attributeId: parseInt(id), value })
+      ),
+    };
+
+    // Create variant in backend
+    const v = await sellerApi.createVariant(state.productId, payload);
+    const variantId = v.id || variant.id;
+    createdVariants.push({ ...variant, id: variantId });
+
+    // Upload variant images if any
+    if (variant.images?.length > 0) {
+      await sellerApi.uploadProductImages(
+        state.productId,
+        variant.images,
+        variantId
+      );
+    }
+  }
+
+  dispatch({ variants: createdVariants });
+  break;
 
         case "Pricing":
           for (const variant of state.variants) {
@@ -127,67 +143,89 @@ const CreateProductPage = () => {
           break;
 
         case "Thumbnail Image":
-          if (state.thumbnailFile) {
-            await sellerApi.uploadProductImages(state.productId, [state.thumbnailFile]);
-          }
-          break;
+  if (state.thumbnailFile) {
+    // Upload thumbnail automatically
+    await sellerApi.uploadProductImages(
+      state.productId,
+      [state.thumbnailFile]
+    );
+  }
+  break;
+
+
+
 
         case "Features":
           await sellerApi.saveFeatures(state.productId, state.features);
           break;
 
         case "Specifications":
-          await sellerApi.saveSpecifications(state.productId, state.specifications);
+          await sellerApi.saveSpecifications(
+            state.productId,
+            state.specifications
+          );
           break;
 
         case "From Manufacturer":
-          await sellerApi.saveManufacturerInfo(state.productId, state.manufacturer);
+          await sellerApi.saveManufacturerInfo(
+            state.productId,
+            state.manufacturer
+          );
           break;
 
         case "Gallery Upload":
-          if (state.images.length > 0) {
-            await sellerApi.uploadProductImages(state.productId, state.images);
-          }
-          // Final step completed: mark as completed
-          dispatch({ isCompleted: true });
-          // Redirect to Seller Product List page
-          navigate("/seller/products"); // <-- change path to your list page
-          return;
+  if (state.images.length > 0) {
+    // Upload all gallery images automatically
+    await sellerApi.uploadProductImages(
+      state.productId,
+      state.images
+    );
+  }
+  break;
 
         default:
           break;
       }
     } catch (err) {
       console.error("API Error:", err);
-      alert("Something went wrong! Please try again.");
+      alert("Something went wrong! Using dev fallback where possible.");
     }
 
-    if (activeStepIndex < steps.length - 1 && !state.isCompleted) {
+    if (activeStepIndex < steps.length - 1)
       setActiveStepIndex(activeStepIndex + 1);
-    }
   };
 
   const goBack = () => {
-    if (activeStepIndex > 0 && !state.isCompleted) {
-      setActiveStepIndex(activeStepIndex - 1);
-    }
+    if (activeStepIndex > 0) setActiveStepIndex(activeStepIndex - 1);
   };
 
   const renderStep = () => {
     const stepProps = { state, dispatch };
     switch (steps[activeStepIndex]) {
-      case "Category": return <CategoryStep {...stepProps} />;
-      case "Brand": return <BrandStep {...stepProps} />;
-      case "Product Information": return <ProductInfoStep {...stepProps} />;
-      case "Attributes": return <AttributeSelection {...stepProps} />;
-      case "Variants": return <VariantStep {...stepProps} />;
-      case "Pricing": return <PricingStep {...stepProps} />;
-      case "Thumbnail Image": return <ThumbnailUpload {...stepProps} />;
-      case "Features": return <ProductFeatureStep {...stepProps} />;
-      case "Specifications": return <ProductSpecification {...stepProps} />;
-      case "From Manufacturer": return <ProductManufact {...stepProps} />;
-      case "Gallery Upload": return <GalleryUpload {...stepProps} />;
-      default: return null;
+      case "Category":
+        return <CategoryStep {...stepProps} />;
+      case "Brand":
+        return <BrandStep {...stepProps} />;
+      case "Product Information":
+        return <ProductInfoStep {...stepProps} />;
+      case "Attributes":
+        return <AttributeSelection {...stepProps} />;
+      case "Variants":
+        return <VariantStep {...stepProps} />;
+      case "Pricing":
+        return <PricingStep {...stepProps} />;
+      case "Thumbnail Image":
+        return <ThumbnailUpload {...stepProps} />;
+      case "Features":
+        return <ProductFeatureStep {...stepProps} />;
+      case "Specifications":
+        return <ProductSpecification {...stepProps} />;
+      case "From Manufacturer":
+        return <ProductManufact {...stepProps} />;
+      case "Gallery Upload":
+        return <GalleryUpload {...stepProps} />;
+      default:
+        return null;
     }
   };
 
@@ -216,11 +254,15 @@ const CreateProductPage = () => {
             <div className="seller-card">
               {renderStep()}
               <div className="seller-actions">
-                <button onClick={goBack} disabled={activeStepIndex === 0 || state.isCompleted} className="btn-back">
+                <button
+                  onClick={goBack}
+                  disabled={activeStepIndex === 0}
+                  className="btn-back"
+                >
                   Back
                 </button>
-                <button onClick={goNext} disabled={state.isCompleted} className="btn-gold">
-                  {state.isCompleted ? "Completed" : "Save & Next"}
+                <button onClick={goNext} className="btn-gold">
+                  Save & Next
                 </button>
               </div>
             </div>

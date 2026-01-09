@@ -1,23 +1,26 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const ThumbnailUpload = ({ state, dispatch }) => {
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    if (state.thumbnailFile) {
+      setPreview(URL.createObjectURL(state.thumbnailFile));
+    }
+  }, [state.thumbnailFile]);
+
   const handleFileChange = (e) => {
-    dispatch({ thumbnailFile: e.target.files[0] });
+    const file = e.target.files[0];
+    if (file) {
+      dispatch({ thumbnailFile: file });
+    }
   };
 
   return (
     <div>
-      <h5>Upload Thumbnail Image</h5>
+      <h5>Upload Thumbnail</h5>
+      {preview && <img src={preview} alt="Thumbnail Preview" width={200} />}
       <input type="file" accept="image/*" onChange={handleFileChange} />
-      {state.thumbnailFile && (
-        <div>
-          <img
-            src={URL.createObjectURL(state.thumbnailFile)}
-            alt="Thumbnail Preview"
-            style={{ width: "150px", marginTop: "10px" }}
-          />
-        </div>
-      )}
     </div>
   );
 };

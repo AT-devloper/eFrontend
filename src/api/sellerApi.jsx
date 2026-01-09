@@ -32,15 +32,15 @@ export const sellerApi = {
   // ---------------------------
   // ATTRIBUTES
   // ---------------------------
- getAllAttributes: async () => {
-  try {
-    const res = await SellerApi.get("/attributes");
-    return res.data;
-  } catch (err) {
-    console.warn("Failed to fetch attributes, using dev fallback");
-    return []; // fallback empty array
-  }
-},
+  getAllAttributes: async () => {
+    try {
+      const res = await SellerApi.get("/attributes");
+      return res.data;
+    } catch (err) {
+      console.warn("Failed to fetch attributes, using dev fallback");
+      return [];
+    }
+  },
 
   // ---------------------------
   // PRODUCT
@@ -57,6 +57,19 @@ export const sellerApi = {
 
   getProductBySlug: (slug) => SellerApi.get(`/products/${slug}`),
   getProductListing: () => SellerApi.get("/products"),
+
+  // ---------------------------
+  // DELETE PRODUCT
+  // ---------------------------
+  deleteProduct: async (productId) => {
+    try {
+      const res = await SellerApi.delete(`/products/${productId}`);
+      return res.data;
+    } catch (err) {
+      console.error(`Failed to delete product ${productId}:`, err);
+      throw err;
+    }
+  },
 
   // ---------------------------
   // VARIANT

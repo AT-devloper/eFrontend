@@ -1,27 +1,30 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const GalleryUpload = ({ state, dispatch }) => {
+  const [previews, setPreviews] = useState([]);
+
+  useEffect(() => {
+    if (state.images.length > 0) {
+      setPreviews(state.images.map((file) => URL.createObjectURL(file)));
+    }
+  }, [state.images]);
+
   const handleFilesChange = (e) => {
-    const files = Array.from(e.target.files);
-    dispatch({ images: files });
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length > 0) {
+      dispatch({ images: selectedFiles });
+    }
   };
 
   return (
     <div>
       <h5>Upload Gallery Images</h5>
-      <input type="file" accept="image/*" multiple onChange={handleFilesChange} />
-      {state.images && state.images.length > 0 && (
-        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-          {state.images.map((file, idx) => (
-            <img
-              key={idx}
-              src={URL.createObjectURL(file)}
-              alt="Gallery"
-              style={{ width: "100px", height: "100px", objectFit: "cover" }}
-            />
-          ))}
-        </div>
-      )}
+      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        {previews.map((src, idx) => (
+          <img key={idx} src={src} alt="preview" width={100} />
+        ))}
+      </div>
+      <input type="file" multiple accept="image/*" onChange={handleFilesChange} />
     </div>
   );
 };
