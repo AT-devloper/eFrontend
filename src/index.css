@@ -588,3 +588,240 @@ h1, h2, h3, .navbar-brand {
     padding: 0.6rem 0.9rem;
   }
 }
+
+/* ======================
+   SELLER CREATE PRODUCT
+====================== */
+
+.seller-wrapper {
+  background-color: var(--ivory);
+  min-height: calc(100vh - 120px);
+  padding-top: 1rem;
+}
+
+/* ======================
+   SIDEBAR
+====================== */
+
+.seller-sidebar {
+  background: linear-gradient(
+    180deg,
+    rgba(107, 31, 43, 0.97),
+    rgba(74, 20, 30, 0.97)
+  );
+  color: white;
+  padding: 2.2rem 1.6rem;
+  position: sticky;
+  top: 90px; /* aligns with navbar */
+  height: calc(100vh - 90px);
+  overflow-y: auto; /* ✅ allow vertical scroll */
+}
+.seller-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.seller-sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 215, 0, 0.6); /* gold */
+  border-radius: 3px;
+}
+
+.seller-sidebar h5 {
+  font-family: 'Playfair Display', serif;
+  letter-spacing: 2px;
+  color: var(--gold);
+  margin-bottom: 1.8rem;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+}
+
+/* ======================
+   STEPS
+====================== */
+
+.seller-step {
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-bottom: 0.45rem;
+  transition: all 0.35s ease;
+  position: relative;
+}
+
+.seller-step:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(4px);
+}
+
+.seller-step.active {
+  background: linear-gradient(135deg, var(--gold), #e3c26b);
+  color: white;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+}
+
+/* Golden dot indicator */
+.seller-step.active::before {
+  content: "•";
+  position: absolute;
+  left: -10px;
+  color: var(--gold);
+  font-size: 1.5rem;
+}
+
+/* ======================
+   MAIN CONTENT
+====================== */
+
+.seller-content {
+  padding: 2.5rem;
+  background: var(--ivory);
+}
+
+/* Breadcrumb */
+.seller-breadcrumb {
+  font-size: 0.85rem;
+  color: #777;
+  margin-bottom: 1.2rem;
+  letter-spacing: 0.4px;
+}
+
+/* ======================
+   CARD
+====================== */
+
+.seller-card {
+  background: white;
+  border-radius: 14px;
+  padding: 2.2rem;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.1);
+  border-top: 4px solid var(--gold);
+}
+
+/* ======================
+   ACTION BUTTONS
+====================== */
+
+.seller-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2.2rem;
+}
+
+.btn-back {
+  background: #eee;
+  color: #444;
+  border: none;
+  padding: 0.6rem 1.6rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+  background: #ddd;
+  transform: translateY(-1px);
+}
+
+/* ======================
+   RESPONSIVE
+====================== */
+
+@media (max-width: 992px) {
+  .seller-sidebar {
+    position: relative;
+    height: auto;
+    top: 0;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .seller-content {
+    padding: 1.4rem;
+  }
+
+  .seller-card {
+    padding: 1.5rem;
+  }
+
+  .seller-actions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+/* ======================
+   CATEGORY PICKER
+====================== */
+.category-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.category-card {
+  flex: 1 1 100px;
+  max-width: 120px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--ivory);
+  text-align: center;
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+.category-card img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  margin-bottom: 0.4rem;
+}
+
+.category-card span {
+  font-weight: 500;
+  color: var(--dark);
+  display: block;
+}
+
+.category-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+  border-color: var(--gold);
+}
+
+.category-card.selected {
+  border: 2px solid var(--gold);
+  background: #fff8e1;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+.category-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.category-btn {
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: 2px solid #ccc;
+  background-color: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.category-btn:hover {
+  border-color: #d4af37;
+}
+
+.category-btn.selected {
+  background-color: #d4af37; /* gold highlight */
+  color: white;
+  border-color: #d4af37;
+}
+
+
