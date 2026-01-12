@@ -1,5 +1,5 @@
-import AuthToggleCard from "./components/AuthToggleCard";
-import GoogleLoginButton from "./components/GoogleLoginButton";
+import AuthToggleCard from "./components/auth/AuthToggleCard";
+import GoogleLoginButton from "./components/auth/GoogleLoginButton";
 import AppRoutes from "./routes/AppRoutes";
 
 

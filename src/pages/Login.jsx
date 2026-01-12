@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authController } from "../components/authController";
+import { authController } from "../components/auth/authController";
 
 const Login = () => {
   const navigate = useNavigate(); // for navigation

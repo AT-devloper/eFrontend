@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import Login from "../pages/Login";
-import Register from "../pages/Register";
+import Login from "../../pages/Login";
+import Register from "../../pages/Register";
 
 
 const AuthToggleCard = () => {

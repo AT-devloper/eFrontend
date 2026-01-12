@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { authController } from "../components/authController";
-import GoogleLoginButton from "../components/GoogleLoginButton"; 
+import { authController } from "../components/auth/authController";
+import GoogleLoginButton from "../components/auth/GoogleLoginButton";
 
 const Register = () => {
   const [form, setForm] = useState({

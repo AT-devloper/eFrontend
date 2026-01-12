@@ -1,125 +1,164 @@
 import axios from "axios";
 
+// Create Axios instance
 const SellerApi = axios.create({
   baseURL: "http://localhost:8080/api",
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Attach JWT automatically
-SellerApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// 🔐 Automatically attach JWT for protected routes
+SellerApi.interceptors.request.use(
+  (config) => {
+    // ✅ Truly public endpoints (no token needed)
+    const publicEndpoints = [
+      "/brands",
+      "/attributes",
+      "/products",          // public listing
+      "/products",         // public product by slug or page
+    ];
 
-export const sellerApi = {
-  // ---------------------------
-  // BRAND
-  // ---------------------------
+    const isPublic = publicEndpoints.some((endpoint) =>
+      config.url.startsWith(endpoint)
+    );
+
+    if (!isPublic) {
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.warn(
+          "No JWT token found in localStorage. This request may fail."
+        );
+      }
+    }
+
+    console.log("Request URL:", config.url, "Headers:", config.headers);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+
+// ===========================
+// SELLER API METHODS
+// ===========================
+const sellerApi = {
+  // BRANDS
   getAllBrands: async () => {
-    try {
-      const res = await SellerApi.get("/brands");
-      return res.data;
-    } catch (err) {
-      console.warn("Failed to fetch brands, using dev fallback");
-      return [
-        { id: 1, name: "At luxe plus" },
-        { id: 2, name: "At luxe star" },
-      ];
-    }
+    const res = await SellerApi.get("/brands");
+    return res.data;
   },
 
-  // ---------------------------
   // ATTRIBUTES
-  // ---------------------------
   getAllAttributes: async () => {
-    try {
-      const res = await SellerApi.get("/attributes");
-      return res.data;
-    } catch (err) {
-      console.warn("Failed to fetch attributes, using dev fallback");
-      return [];
-    }
+    const res = await SellerApi.get("/attributes");
+    return res.data;
   },
 
-  // ---------------------------
-  // PRODUCT
-  // ---------------------------
+  // PRODUCTS
   createProduct: async (data) => {
-    try {
-      const res = await SellerApi.post("/products", data);
-      return res.data;
-    } catch (err) {
-      console.warn("Failed to create product, using dev fallback ID");
-      return { id: 999, ...data }; // dev fallback ID
-    }
+    const res = await SellerApi.post("/products", data);
+    return res.data;
   },
 
-  getProductBySlug: (slug) => SellerApi.get(`/products/${slug}`),
-  getProductListing: () => SellerApi.get("/products"),
+  getProductListing: async () => {
+    const res = await SellerApi.get("/products/page");
+    return res.data;
+  },
 
-  // ---------------------------
-  // DELETE PRODUCT
-  // ---------------------------
+   getProductById: (id) => axios.get(`${BASE_URL}/products/${id}`).then(res => res.data),
+
   deleteProduct: async (productId) => {
-    try {
-      const res = await SellerApi.delete(`/products/${productId}`);
-      return res.data;
-    } catch (err) {
-      console.error(`Failed to delete product ${productId}:`, err);
-      throw err;
-    }
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.delete(`/products/${productId}`);
+    return res.data;
   },
 
-  // ---------------------------
-  // VARIANT
-  // ---------------------------
-  createVariant: (productId, data) =>
-    SellerApi.post(`/products/${productId}/variants`, data),
-  getVariants: (productId) =>
-    SellerApi.get(`/products/${productId}/variants`),
-
-  // ---------------------------
-  // VARIANT PRICING
-  // ---------------------------
-  setVariantPrice: (variantId, data) =>
-    SellerApi.post(`/variants/${variantId}/pricing/price`, data),
-  setVariantDiscount: (variantId, data) =>
-    SellerApi.post(`/variants/${variantId}/pricing/discount`, data),
-  getVariantPricing: (variantId) =>
-    SellerApi.get(`/variants/${variantId}/pricing`),
-
-  // ---------------------------
   // PRODUCT IMAGES
-  // ---------------------------
-  uploadProductImages: (productId, files, variantId) => {
+  uploadProductImages: async (productId, files, variantId) => {
+    if (!productId) throw new Error("productId is required");
+
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
     if (variantId) formData.append("variantId", variantId);
 
-    return SellerApi.post(`/products/${productId}/images`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-  },
-  getProductImages: (productId, variantId) =>
-    SellerApi.get(`/products/${productId}/images`, {
-      params: variantId ? { variantId } : {},
-    }),
+    const res = await SellerApi.post(
+      `/products/${productId}/images`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
 
-  // ---------------------------
-  // DEV FALLBACK FUNCTIONS
-  // ---------------------------
-  saveAttributes: async (productId, attributes) => {
-    console.log("Saving attributes (dev fallback):", productId, attributes);
+    return res.data;
   },
+
+  getProductImages: async (productId) => {
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.get(`/products/${productId}/images`);
+    return res.data;
+  },
+
+  // VARIANTS
+  createVariant: async (productId, data) => {
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.post(`/products/${productId}/variants`, data);
+    return res.data;
+  },
+
+  getVariants: async (productId) => {
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.get(`/products/${productId}/variants`);
+    return res.data;
+  },
+
+  // VARIANT PRICING
+  setVariantPrice: async (variantId, data) => {
+    if (!variantId) throw new Error("variantId is required");
+    const res = await SellerApi.post(
+      `/variants/${variantId}/pricing/price`,
+      data
+    );
+    return res.data;
+  },
+
+  setVariantDiscount: async (variantId, data) => {
+    if (!variantId) throw new Error("variantId is required");
+    const res = await SellerApi.post(
+      `/variants/${variantId}/pricing/discount`,
+      data
+    );
+    return res.data;
+  },
+
+  // FEATURES
   saveFeatures: async (productId, features) => {
-    console.log("Saving features (dev fallback):", productId, features);
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.post(`/products/${productId}/features`, features);
+    return res.data;
   },
+
+  // SPECIFICATIONS
   saveSpecifications: async (productId, specifications) => {
-    console.log("Saving specifications (dev fallback):", productId, specifications);
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.post(
+      `/products/${productId}/specifications/bulk`,
+      specifications
+    );
+    return res.data;
   },
+
+  getSpecifications: async (productId) => {
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.get(`/products/${productId}/specifications`);
+    return res.data;
+  },
+
+  // MANUFACTURER INFO
   saveManufacturerInfo: async (productId, manufacturer) => {
-    console.log("Saving manufacturer (dev fallback):", productId, manufacturer);
+    if (!productId) throw new Error("productId is required");
+    const res = await SellerApi.post(`/products/${productId}/manufacturer`, { manufacturer });
+    return res.data;
   },
 };
 
