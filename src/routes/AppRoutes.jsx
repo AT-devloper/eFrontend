@@ -3,6 +3,7 @@ import Home from "../Pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Products from "../components/product/Products";
+import ProductDetailsPage from "../pages/ProductDetailsPage";
 
 import ForgotPassword from "../components/auth/ForgotPassword";
 import ResetPassword from "../components/auth/ResetPassword";
@@ -20,8 +21,8 @@ export default function AppRoutes() {
 
       {/* Public pages */}
       <Route path="/home" element={<Home />} />
-  <Route path="/products" element={<Products />} />
-
+    <Route path="/products" element={<Products />} />
+     <Route path="/products/:productId" element={<ProductDetailsPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -29,7 +30,7 @@ export default function AppRoutes() {
       <Route path="/auth" element={<AuthToggleCard />} />
 
       {/* Seller page */}
-      <Route path="/product-steps/create-product" element={<CreateProductPage />} />
+      <Route path="/productlist/createproduct" element={<CreateProductPage />} />
 
       <Route path="/product/products" element={<ProductListPage />} />
       {/* Catch all - redirect unknown paths to home */}

@@ -11,13 +11,13 @@ const SellerApi = axios.create({
 // 🔐 Automatically attach JWT for protected routes
 SellerApi.interceptors.request.use(
   (config) => {
-    // ✅ Truly public endpoints (no token needed)
     const publicEndpoints = [
       "/brands",
       "/attributes",
-      "/products",          // public listing
-      "/products",         // public product by slug or page
+      "/products/page",
+      "/products/page/",
     ];
+
 
     const isPublic = publicEndpoints.some((endpoint) =>
       config.url.startsWith(endpoint)
@@ -68,10 +68,15 @@ const sellerApi = {
     return res.data;
   },
 
-   getProductById: (id) => axios.get(`${BASE_URL}/products/${id}`).then(res => res.data),
+  // ✅ SINGLE PRODUCT PAGE (IMPORTANT)
+  getProductPage: async (productId) => {
+    if (!productId) throw new Error("productId required");
+    const res = await SellerApi.get(`/products/page/${productId}/page`);
+    return res.data;
+  },
 
+  // OPTIONAL (keep if needed)
   deleteProduct: async (productId) => {
-    if (!productId) throw new Error("productId is required");
     const res = await SellerApi.delete(`/products/${productId}`);
     return res.data;
   },
@@ -92,6 +97,12 @@ const sellerApi = {
 
     return res.data;
   },
+
+  getProductById: async (productId) => {
+  const res = await axios.get(`/api/products/page/${productId}/page`);
+  return res.data; // RETURN FULL PAGE RESPONSE
+},
+
 
   getProductImages: async (productId) => {
     if (!productId) throw new Error("productId is required");

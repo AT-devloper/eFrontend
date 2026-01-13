@@ -1,60 +1,62 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 
 const ProductFeatureStep = ({ state, dispatch }) => {
-  const [features, setFeatures] = useState(
-    state.features.length ? state.features : [""]
-  );
+  // Predefined jewelry features
+  const featureOptions = [
+    "Handmade",
+    "Hallmarked",
+    "Certified",
+    "Limited Edition",
+    "Adjustable",
+  ];
 
-  const addFeature = () => setFeatures([...features, ""]);
+  const [selectedFeatures, setSelectedFeatures] = useState([]);
 
-  const updateFeature = (idx, value) => {
-    const copy = [...features];
-    copy[idx] = value;
-    setFeatures(copy);
+  useEffect(() => {
+    if (state.features && state.features.length) {
+      setSelectedFeatures(state.features.map(f => f.feature));
+    }
+  }, [state.features]);
 
-    // 🔥 update parent immediately
+  const toggleFeature = (feature) => {
+    if (selectedFeatures.includes(feature)) {
+      setSelectedFeatures(selectedFeatures.filter(f => f !== feature));
+    } else {
+      setSelectedFeatures([...selectedFeatures, feature]);
+    }
+
+    // Immediately update parent
+    const updated = selectedFeatures.includes(feature)
+      ? selectedFeatures.filter(f => f !== feature)
+      : [...selectedFeatures, feature];
+
     dispatch({
-      features: copy.map(f => f.trim()).filter(Boolean),
+      features: updated.map((f, idx) => ({
+        id: idx + 1,
+        productId: state.productId || null,
+        feature: f,
+      })),
     });
   };
-
-  const removeFeature = (idx) => {
-    const updated = features.filter((_, i) => i !== idx);
-    const safe = updated.length ? updated : [""];
-
-    setFeatures(safe);
-    dispatch({
-      features: safe.map(f => f.trim()).filter(Boolean),
-    });
-  };
-
-  const isValid = useMemo(
-    () => features.some(f => f.trim() !== ""),
-    [features]
-  );
 
   return (
     <div>
-      <h5>Product Features</h5>
+      <h5>Product Features (Jewelry)</h5>
+      <div style={{ marginBottom: "10px" }}>
+        {featureOptions.map((feature) => (
+          <label key={feature} style={{ display: "block", marginBottom: 5 }}>
+            <input
+              type="checkbox"
+              checked={selectedFeatures.includes(feature)}
+              onChange={() => toggleFeature(feature)}
+            />{" "}
+            {feature}
+          </label>
+        ))}
+      </div>
 
-      {features.map((f, idx) => (
-        <div key={idx} style={{ marginBottom: 6 }}>
-          <input
-            type="text"
-            value={f}
-            placeholder="Feature"
-            onChange={(e) => updateFeature(idx, e.target.value)}
-          />
-          <button onClick={() => removeFeature(idx)}>Remove</button>
-        </div>
-      ))}
-
-      <button onClick={addFeature}>Add Feature</button>
-
-      {!isValid && (
-        <p style={{ color: "red", marginTop: 5 }}>
-          Add at least one feature
-        </p>
+      {selectedFeatures.length === 0 && (
+        <p style={{ color: "red" }}>Select at least one feature</p>
       )}
     </div>
   );
