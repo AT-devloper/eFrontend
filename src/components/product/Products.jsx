@@ -25,6 +25,12 @@ const Products = () => {
         <h2>My Products</h2>
 
         <div className="row">
+          {products.length === 0 && (
+            <div className="col-12 text-center mt-4">
+              No products found.
+            </div>
+          )}
+
           {products.map((p) => (
             <div
               key={p.productId}
@@ -33,6 +39,8 @@ const Products = () => {
               style={{ cursor: "pointer" }}
             >
               <div className="card h-100">
+
+                {/* IMAGE */}
                 {p.image ? (
                   <img
                     src={p.image}
@@ -56,8 +64,11 @@ const Products = () => {
                 )}
 
                 <div className="card-body">
-                  <h5>{p.name}</h5>
-                  <p>₹{p.price ?? 0}</p>
+                  <h5 className="card-title">{p.name}</h5>
+                  <p className="card-text">
+                    ₹{p.price !== null ? p.price.toFixed(2) : "0.00"}
+                  </p>
+                  <p className="card-text text-muted">{p.brand}</p>
                 </div>
               </div>
             </div>

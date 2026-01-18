@@ -1,40 +1,30 @@
 import React, { useState, useEffect } from "react";
 
 const ProductFeatureStep = ({ state, dispatch }) => {
-  // Predefined jewelry features
-  const featureOptions = [
-    "Handmade",
-    "Hallmarked",
-    "Certified",
-    "Limited Edition",
-    "Adjustable",
-  ];
-
+  const featureOptions = ["Handmade", "Hallmarked", "Certified", "Limited Edition", "Adjustable"];
   const [selectedFeatures, setSelectedFeatures] = useState([]);
 
   useEffect(() => {
     if (state.features && state.features.length) {
-      setSelectedFeatures(state.features.map(f => f.feature));
+      setSelectedFeatures(state.features.map((f) => f.feature));
     }
   }, [state.features]);
 
   const toggleFeature = (feature) => {
+    let updated = [];
     if (selectedFeatures.includes(feature)) {
-      setSelectedFeatures(selectedFeatures.filter(f => f !== feature));
+      updated = selectedFeatures.filter((f) => f !== feature);
     } else {
-      setSelectedFeatures([...selectedFeatures, feature]);
+      updated = [...selectedFeatures, feature];
     }
+    setSelectedFeatures(updated);
 
-    // Immediately update parent
-    const updated = selectedFeatures.includes(feature)
-      ? selectedFeatures.filter(f => f !== feature)
-      : [...selectedFeatures, feature];
-
+    // Update parent state
     dispatch({
       features: updated.map((f, idx) => ({
-        id: idx + 1,
-        productId: state.productId || null,
         feature: f,
+        productId: state.productId || null,
+        id: idx + 1,
       })),
     });
   };

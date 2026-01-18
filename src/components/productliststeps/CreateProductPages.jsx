@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ import navigate
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import SellerLayout from "../../layouts/SellerLayout";
 import sellerApi from "../../api/sellerApi";
 
@@ -31,16 +31,15 @@ const steps = [
 ];
 
 const CreateProductPage = () => {
-  const navigate = useNavigate(); // ✅ for redirect
+  const navigate = useNavigate();
 
   const [activeStepIndex, setActiveStepIndex] = useState(0);
-
   const [state, setState] = useState({
     categoryId: "",
     brandId: "",
     productInfo: { name: "", description: "", sku: "", weight: "" },
-    attributes: {},
-    variants: [],
+    attributes: {},      // { attrId: [valIds] }
+    variants: [],        // [{ sku, stock, price?, discount? }]
     features: [],
     specifications: [],
     manufacturer: "",
@@ -51,11 +50,13 @@ const CreateProductPage = () => {
 
   const dispatch = (update) => setState((prev) => ({ ...prev, ...update }));
 
+  // Ensure we have productId before some steps
   const requireProductId = () => {
     if (!state.productId) {
       alert("Please complete Product Information first");
       throw new Error("productId missing");
     }
+    return true;
   };
 
   const goNext = async () => {
@@ -81,83 +82,96 @@ const CreateProductPage = () => {
           };
 
           const res = await sellerApi.createProduct(productData);
-          dispatch({ productId: res.id });
+          dispatch({ productId: res.productId || res.id });
           break;
         }
 
-        case "Attributes":
+        case "Attributes": {
           requireProductId();
+          if (!state.attributes || Object.keys(state.attributes).length === 0) {
+            return alert("Select at least one attribute");
+          }
+
+          const payload = Object.entries(state.attributes).flatMap(([attrId, valIds]) =>
+            valIds.map((valId) => ({
+              attributeId: Number(attrId),
+              valueId: Number(valId),
+            }))
+          );
+
+          await sellerApi.saveAttributes(state.productId, payload);
           break;
+        }
 
         case "Variants": {
-  requireProductId();
-  if (!state.variants.length) return alert("Add at least one variant");
+          requireProductId();
+          if (!state.variants.length) return alert("Add at least one variant");
 
-  const createdVariants = [];
+          const createdVariants = [];
 
-  for (const variant of state.variants) {
-    const payload = { 
-      sku: variant.sku, 
-      stock: Number(variant.stock) || 0, 
-      attributes: state.attributeIds || {} 
-    };
+          for (const variant of state.variants) {
+            const attributeArray = Object.entries(state.attributes).flatMap(
+              ([attrId, valIds]) => valIds.map((valId) => ({
+                attributeId: Number(attrId),
+                valueId: Number(valId),
+              }))
+            );
 
-    try {
-      const res = await sellerApi.createVariant(state.productId, payload);
-      const backendVariantId = res.id; // ✅ use res.id instead of res.data.id
+            const payload = {
+              sku: variant.sku,
+              stock: Number(variant.stock) || 0,
+              attributes: attributeArray,
+            };
 
-      // Set pricing if exists
-      if (variant.price) {
-        await sellerApi.setVariantPrice(backendVariantId, {
-          mrp: variant.price.mrp,
-          sellingPrice: variant.price.sellingPrice,
-        });
+            try {
+              const res = await sellerApi.createVariant(state.productId, payload);
+              const backendVariantId = res.id || res.variantId;
 
-        if (variant.discount) {
-          await sellerApi.setVariantDiscount(backendVariantId, {
-            discountType: variant.discount.discountType || "PERCENT",
-            discountValue: variant.discount.discountValue || 0,
-          });
+              // Set price and discount if available
+              if (variant.price) {
+                await sellerApi.setVariantPrice(backendVariantId, {
+                  mrp: Number(variant.price.mrp) || 0,
+                  sellingPrice: Number(variant.price.sellingPrice) || 0,
+                });
+                if (variant.discount) {
+                  await sellerApi.setVariantDiscount(backendVariantId, {
+                    discountType: variant.discount.discountType || "PERCENT",
+                    discountValue: Number(variant.discount.discountValue) || 0,
+                  });
+                }
+              }
+
+              createdVariants.push({ ...variant, id: backendVariantId });
+            } catch (err) {
+              console.error(`Failed to create/save variant ${variant.sku}`, err);
+              alert(`Failed to create/save variant ${variant.sku}`);
+            }
+          }
+
+          dispatch({ variants: createdVariants });
+          break;
         }
-      }
 
-      createdVariants.push({ ...variant, id: backendVariantId });
-    } catch (err) {
-      console.error(`Failed to create/save variant ${variant.sku}`, err);
-      alert(`Failed to create/save variant ${variant.sku}`);
-    }
-  }
-
-  dispatch({ variants: createdVariants });
-  break;
-}
-
-
-case "Pricing":
-  requireProductId();
-  for (const v of state.variants) {
-    if (!v.id) continue; // skip unsaved variants
-
-    // convert empty strings to 0
-    const mrp = Number(v.price?.mrp) || 0;
-    const sellingPrice = Number(v.price?.sellingPrice) || 0;
-    const discountValue = Number(v.discount?.discountValue) || 0;
-
-    try {
-      await sellerApi.setVariantPrice(v.id, { mrp, sellingPrice });
-      await sellerApi.setVariantDiscount(v.id, {
-        discountType: v.discount?.discountType || "PERCENT",
-        discountValue,
-      });
-    } catch (err) {
-      console.error(`Failed to save pricing for ${v.sku}`, err.response || err);
-      alert(`Failed to save pricing for ${v.sku}`);
-    }
-  }
-  break;
-
-
-
+        case "Pricing": {
+          requireProductId();
+          for (const v of state.variants) {
+            if (!v.id) continue;
+            const mrp = Number(v.price?.mrp) || 0;
+            const sellingPrice = Number(v.price?.sellingPrice) || 0;
+            const discountValue = Number(v.discount?.discountValue) || 0;
+            try {
+              await sellerApi.setVariantPrice(v.id, { mrp, sellingPrice });
+              await sellerApi.setVariantDiscount(v.id, {
+                discountType: v.discount?.discountType || "PERCENT",
+                discountValue,
+              });
+            } catch (err) {
+              console.error(`Failed to save pricing for ${v.sku}`, err.response || err);
+              alert(`Failed to save pricing for ${v.sku}`);
+            }
+          }
+          break;
+        }
 
         case "Thumbnail Image":
           requireProductId();
@@ -167,38 +181,23 @@ case "Pricing":
           break;
 
         case "Features":
-  requireProductId();
+          requireProductId();
+          if (!state.features.length) return alert("Add at least one feature");
+          await sellerApi.saveFeatures(
+            state.productId,
+            state.features.map((f) => ({ feature: f.feature, productId: state.productId }))
+          );
+          break;
 
-  if (!state.features.length) {
-    alert("Add at least one feature before continuing");
-    return;
-  }
-
-  await sellerApi.saveFeatures(state.productId, state.features);
-  break;
-
-
-       case "Specifications":
-  requireProductId();
-
-  if (!state.specifications || !state.specifications.length) {
-    alert("Add at least one specification before continuing");
-    return;
-  }
-
-  try {
-    await sellerApi.saveSpecifications(state.productId, state.specifications);
-    alert("Specifications saved successfully!");
-  } catch (err) {
-    console.error("Failed to save specifications:", err);
-    alert("Failed to save specifications. Check console.");
-  }
-  break;
-
-
+        case "Specifications":
+          requireProductId();
+          if (!state.specifications.length) return alert("Add at least one specification");
+          await sellerApi.saveSpecifications(state.productId, state.specifications);
+          break;
 
         case "From Manufacturer":
           requireProductId();
+          if (!state.manufacturer) return alert("Enter manufacturer info");
           await sellerApi.saveManufacturerInfo(state.productId, state.manufacturer);
           break;
 
@@ -213,9 +212,8 @@ case "Pricing":
           break;
       }
 
-      if (activeStepIndex < steps.length - 1) {
-        setActiveStepIndex((i) => i + 1);
-      }
+      // Move to next step
+      if (activeStepIndex < steps.length - 1) setActiveStepIndex((i) => i + 1);
     } catch (err) {
       console.error("API Error:", err);
       alert("Something went wrong. Check console.");
@@ -300,14 +298,10 @@ case "Pricing":
                   <>
                     <button
                       onClick={async () => {
-                        if (!state.images.length)
-                          return alert("Select images to upload.");
+                        if (!state.images.length) return alert("Select images to upload.");
                         try {
                           requireProductId();
-                          await sellerApi.uploadProductImages(
-                            state.productId,
-                            state.images
-                          );
+                          await sellerApi.uploadProductImages(state.productId, state.images);
                           alert("Images uploaded successfully!");
                         } catch (err) {
                           console.error(err);
@@ -324,7 +318,7 @@ case "Pricing":
                         if (!state.images.length)
                           return alert("Upload at least one image to complete.");
                         alert("Product listing completed!");
-                        navigate("/seller/products"); // ✅ Redirect to product list
+                        navigate("/seller/products");
                       }}
                       className="btn-gold"
                     >

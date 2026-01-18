@@ -2,48 +2,53 @@ import React, { useState, useEffect } from "react";
 import sellerApi from "../../api/sellerApi";
 
 const PricingStep = ({ state, dispatch }) => {
-  const [pricingData, setPricingData] = useState(
-    state.variants.map((v) => ({
-      id: v.id,
-      sku: v.sku,
-      mrp: v.price?.mrp || 0,
-      discountType: v.discount?.discountType || "PERCENT",
-      discountValue: v.discount?.discountValue || 0,
-      sellingPrice: v.price?.sellingPrice || 0,
-    }))
-  );
+  const [pricingData, setPricingData] = useState([]);
 
-  // Auto-calculate selling price whenever MRP or discount changes
+  useEffect(() => {
+    setPricingData(
+      state.variants.map((v) => ({
+        id: v.id,
+        sku: v.sku,
+        mrp: v.price?.mrp || 0,
+        discountType: v.discount?.discountType || "PERCENT",
+        discountValue: v.discount?.discountValue || 0,
+        sellingPrice: v.price?.sellingPrice || 0,
+      }))
+    );
+  }, [state.variants]);
+
+  // Auto-calculate selling price
   useEffect(() => {
     setPricingData((prev) =>
       prev.map((v) => {
         let sp = Number(v.mrp) || 0;
         const discount = Number(v.discountValue) || 0;
 
-        if (v.discountType === "PERCENT") {
-          sp = sp - (sp * discount) / 100;
-        } else if (v.discountType === "FIXED") {
-          sp = sp - discount;
-        }
+        if (v.discountType === "PERCENT") sp -= (sp * discount) / 100;
+        else if (v.discountType === "FIXED") sp -= discount;
 
         if (sp < 0) sp = 0;
 
         return { ...v, sellingPrice: sp.toFixed(2) };
       })
     );
-  }, [pricingData.map((v) => `${v.mrp}-${v.discountType}-${v.discountValue}`).join()]);
+  }, [
+    pricingData.map((v) => `${v.mrp}-${v.discountType}-${v.discountValue}`).join(),
+  ]);
 
   const handleChange = (variantId, field, value) => {
     setPricingData((prev) =>
       prev.map((v) =>
         v.id === variantId
-          ? { ...v, [field]: field === "discountValue" || field === "mrp" ? Number(value) : value }
+          ? { ...v, [field]: field === "mrp" || field === "discountValue" ? Number(value) : value }
           : v
       )
     );
   };
 
   const savePricing = async () => {
+    if (!state.productId) return alert("Save product first to update pricing.");
+
     for (const v of pricingData) {
       try {
         await sellerApi.setVariantPrice(v.id, {
@@ -59,8 +64,8 @@ const PricingStep = ({ state, dispatch }) => {
         alert(`Failed to save pricing for ${v.sku}`);
       }
     }
-    alert("Pricing saved successfully!");
-    // Update parent state so goNext has correct data
+
+    // Update parent state
     dispatch({
       variants: pricingData.map((v) => ({
         ...state.variants.find((orig) => orig.id === v.id),
@@ -68,6 +73,8 @@ const PricingStep = ({ state, dispatch }) => {
         discount: { discountType: v.discountType, discountValue: v.discountValue },
       })),
     });
+
+    alert("Pricing saved successfully!");
   };
 
   return (
@@ -77,7 +84,7 @@ const PricingStep = ({ state, dispatch }) => {
         <thead>
           <tr>
             <th>SKU</th>
-            <th>Cost (MRP)</th>
+            <th>MRP</th>
             <th>Discount Type</th>
             <th>Discount Value</th>
             <th>Selling Price</th>
