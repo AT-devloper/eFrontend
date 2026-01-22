@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import sellerApi from "../../api/sellerApi";
 
-const AttributeSelection = ({ state, dispatch, productId }) => {
+const AttributeSelection = ({ state, dispatch }) => {
   const [attributes, setAttributes] = useState([]);
-  const [currentSelection, setCurrentSelection] = useState({}); // { attrId: [valId] }
+  const [currentSelection, setCurrentSelection] = useState({});
 
+  // Fetch all attributes
   useEffect(() => {
     const fetchAttributes = async () => {
       try {
@@ -18,13 +19,29 @@ const AttributeSelection = ({ state, dispatch, productId }) => {
     fetchAttributes();
   }, []);
 
+  // Update state.attributes whenever attributeSets change
+  useEffect(() => {
+    if (state.attributeSets && state.attributeSets.length > 0) {
+      const mergedAttrs = {};
+      state.attributeSets.forEach((set) => {
+        Object.entries(set).forEach(([attrId, valIds]) => {
+          mergedAttrs[attrId] = Array.from(
+            new Set([...(mergedAttrs[attrId] || []), ...valIds])
+          );
+        });
+      });
+      dispatch({ attributes: mergedAttrs });
+    } else {
+      dispatch({ attributes: {} });
+    }
+  }, [state.attributeSets]);
+
   const handleSelect = (attrId, valId) => {
     setCurrentSelection((prev) => {
       const selected = prev[attrId] || [];
       const newSelected = selected.includes(valId)
         ? selected.filter((id) => id !== valId)
         : [...selected, valId];
-
       return { ...prev, [attrId]: newSelected };
     });
   };
@@ -35,24 +52,15 @@ const AttributeSelection = ({ state, dispatch, productId }) => {
       return;
     }
 
-    const updatedAttributes = { ...state.attributes };
-
-    Object.entries(currentSelection).forEach(([attrId, valIds]) => {
-      if (!updatedAttributes[attrId]) updatedAttributes[attrId] = [];
-      updatedAttributes[attrId] = Array.from(
-        new Set([...updatedAttributes[attrId], ...valIds])
-      );
-    });
-
-    dispatch({ attributes: updatedAttributes });
+    const updatedSets = [...(state.attributeSets || []), currentSelection];
+    dispatch({ attributeSets: updatedSets });
     setCurrentSelection({});
   };
 
-  const removeAttributeValue = (attrId, valId) => {
-    const updated = { ...state.attributes };
-    updated[attrId] = updated[attrId].filter((id) => id !== valId);
-    if (updated[attrId].length === 0) delete updated[attrId];
-    dispatch({ attributes: updated });
+  const removeAttributeSet = (index) => {
+    const updated = [...state.attributeSets];
+    updated.splice(index, 1);
+    dispatch({ attributeSets: updated });
   };
 
   const getValueName = (attrId, valId) => {
@@ -69,10 +77,7 @@ const AttributeSelection = ({ state, dispatch, productId }) => {
           <strong>{attr.name}</strong>
           <div style={{ display: "flex", flexWrap: "wrap", marginTop: "6px" }}>
             {attr.values.map((val) => {
-              const selected =
-                (currentSelection[attr.id] || []).includes(val.id) ||
-                (state.attributes[attr.id] || []).includes(val.id);
-
+              const selected = (currentSelection[attr.id] || []).includes(val.id);
               return (
                 <button
                   key={`${attr.id}-${val.id}`}
@@ -100,28 +105,30 @@ const AttributeSelection = ({ state, dispatch, productId }) => {
         Add Attribute Set
       </button>
 
-      {state.attributes && Object.keys(state.attributes).length > 0 && (
+      {state.attributeSets && state.attributeSets.length > 0 && (
         <div style={{ marginTop: "10px" }}>
-          <strong>Selected Attributes:</strong>
+          <strong>Selected Attribute Sets:</strong>
           <ul>
-            {Object.entries(state.attributes).map(([attrId, valIds]) =>
-              valIds.map((valId) => (
-                <li
-                  key={`${attrId}-${valId}`}
-                  onClick={() => removeAttributeValue(attrId, valId)}
+            {state.attributeSets.map((set, idx) => (
+              <li key={idx} style={{ marginBottom: "6px" }}>
+                {Object.entries(set)
+                  .map(([attrId, valIds]) =>
+                    valIds.map((valId) => getValueName(attrId, valId)).join(", ")
+                  )
+                  .join(" | ")}
+                <button
                   style={{
-                    cursor: "pointer",
-                    margin: "4px 0",
+                    marginLeft: "10px",
+                    padding: "2px 6px",
                     border: "1px solid #ccc",
-                    padding: "4px",
-                    borderRadius: "4px",
-                    display: "inline-block",
+                    cursor: "pointer",
                   }}
+                  onClick={() => removeAttributeSet(idx)}
                 >
-                  {getValueName(attrId, valId)} &times;
-                </li>
-              ))
-            )}
+                  Remove
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
       )}
