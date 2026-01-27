@@ -9,6 +9,10 @@ import ResetPassword from "../components/auth/ResetPassword";
 import AuthToggleCard from "../components/auth/AuthToggleCard";
 import CreateProductPage from "../components/productliststeps/CreateProductPages";
 import ProductListPage from "../components/product/ProductListPage";
+
+import Checkout from "../pages/Checkout";
+
+
 import Cart from "../pages/Cart";
 // import Wishlist from "../pages/Wishlist";
 
@@ -30,6 +34,7 @@ export default function AppRoutes() {
 
       {/* Cart & Wishlist */}
       <Route path="/cart" element={<Cart />} />
+      <Route path="/checkout" element={<Checkout />} />
       {/* <Route path="/wishlist" element={<Wishlist />} /> */}
 
       {/* Seller pages */}

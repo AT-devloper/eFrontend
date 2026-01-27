@@ -937,15 +937,22 @@ h1, h2, h3, .navbar-brand {
   text-align: right;
 }
 
-/* Remove */
+/* Remove icon */
 .cart-item-remove {
   font-size: 18px;
   color: rgba(107, 31, 43, 0.5);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .cart-item-remove:hover {
   color: var(--maroon);
+  transform: scale(1.1);
 }
 
 /* Total section */
@@ -1024,6 +1031,119 @@ h1, h2, h3, .navbar-brand {
     gap: 16px;
   }
 }
+
+/* Checkout summary row */
+.checkout-summary {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+/* Divider */
+.checkout-divider {
+  border: none;
+  border-top: 1px solid rgba(107, 31, 43, 0.15);
+  margin: 12px 0;
+}
+
+/* Payment options row */
+.payment-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payment-buttons button {
+  padding: 10px 20px;
+  border-radius: 30px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+  background: linear-gradient(135deg, var(--gold), #e3c26b);
+  color: #fff;
+}
+
+.payment-buttons button:hover {
+  opacity: 0.95;
+}
+
+/* Free delivery and total text */
+.free-delivery {
+  color: var(--maroon);
+}
+
+/* Horizontal line */
+.checkout-line {
+  border: none;
+  border-top: 1px solid rgba(107, 31, 43, 0.15);
+  margin: 12px 0;
+}
+
+/* Summary row */
+.checkout-summary {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 8px 0;
+}
+
+/* Free delivery and total text */
+.free-delivery {
+  color: var(--maroon);
+}
+
+.total-price {
+  font-weight: 600;
+}
+
+/* Payment row */
+.payment-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.pay-text {
+  font-weight: 500;
+}
+
+.payment-buttons button {
+  padding: 10px 20px;
+  border-radius: 30px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+  background: linear-gradient(135deg, var(--gold), #e3c26b);
+  color: #fff;
+}
+
+.payment-buttons button:hover {
+  opacity: 0.95;
+}
+
+/* Mobile adjustments */
+@media (max-width: 720px) {
+  .checkout-summary,
+  .payment-options {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .payment-buttons {
+    display: flex;
+    flex-direction: row;
+    margin-top: 8px;
+  }
+}
+
+
+
 
 /* Wishlist Container */
 .wishlist-container {
