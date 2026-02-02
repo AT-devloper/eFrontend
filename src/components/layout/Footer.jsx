@@ -1,7 +1,9 @@
+import { Box, Typography } from "@mui/material";
+
 export default function Footer() {
   return (
-    <footer className="footer py-3 text-center mt-5">
-      © 2025 AT-Luxe Jewellery
-    </footer>
+    <Box sx={{ py: 3, textAlign: "center", mt: 5, bgcolor: "grey.200" }}>
+      <Typography>© 2025-26 AT-Luxe Jewellery</Typography>
+    </Box>
   );
 }

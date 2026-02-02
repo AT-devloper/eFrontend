@@ -1,14 +1,16 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import Home from "../Pages/Home";
+import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Products from "../components/product/Products";
-import ProductDetailsPage from "../pages/ProductDetailsPage";
+import ProductDetailsPage from "../components/product/ProductDetailsPage";
 import ForgotPassword from "../components/auth/ForgotPassword";
 import ResetPassword from "../components/auth/ResetPassword";
 import AuthToggleCard from "../components/auth/AuthToggleCard";
 import CreateProductPage from "../components/productliststeps/CreateProductPages";
 import ProductListPage from "../components/product/ProductListPage";
+import MyOrders from "../pages/MyOrders";
+import OrderDetail from "../pages/OrderDetail";
 
 import Checkout from "../pages/Checkout";
 
@@ -35,6 +37,8 @@ export default function AppRoutes() {
       {/* Cart & Wishlist */}
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/my-orders" element={<MyOrders />} />
+      <Route path="/my-orders/:orderNumber" element={<OrderDetail />} />
       {/* <Route path="/wishlist" element={<Wishlist />} /> */}
 
       {/* Seller pages */}

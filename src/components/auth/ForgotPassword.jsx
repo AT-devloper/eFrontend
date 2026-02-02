@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { authController } from "./authController";
+import { Box, Button, TextField, Typography, Alert, CircularProgress, Link } from "@mui/material";
 
-const ForgotPassword = () => {
+const ForgotPassword = ({ switchToLogin, switchToReset }) => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -10,9 +11,11 @@ const ForgotPassword = () => {
     e.preventDefault();
     setMessage("");
     setLoading(true);
+
     try {
-      await authController.requestPasswordReset(email);
-      setMessage("Reset link sent! Check your email.");
+      const token = await authController.requestPasswordReset(email); // should return reset token
+      setMessage("Reset link sent! Redirecting to reset page...");
+      setTimeout(() => switchToReset(token), 1000);
     } catch (err) {
       setMessage(err.response?.data?.message || "Failed to send reset link.");
     } finally {
@@ -21,32 +24,28 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="auth-card">
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", marginBottom: "1rem", color: "var(--maroon)" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Typography variant="h5" fontWeight={600} textAlign="center">
         Forgot Password
-      </h2>
+      </Typography>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="login-input"
-        />
+      {message && <Alert severity={message.includes("Failed") ? "error" : "success"}>{message}</Alert>}
 
-        <button type="submit" disabled={loading} className="login-btn">
-          {loading ? "Sending..." : "Send Reset Link"}
-        </button>
-      </form>
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <TextField label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth />
 
-      {message && (
-        <p style={{ marginTop: "1rem", color: message.includes("Failed") ? "#e74c3c" : "#2ecc71" }}>
-          {message}
-        </p>
-      )}
-    </div>
+        <Button type="submit" variant="contained" color="primary" disabled={loading} sx={{ py: 1.5 }}>
+          {loading ? <CircularProgress size={24} /> : "Send Reset Link"}
+        </Button>
+      </Box>
+
+      <Typography variant="body2" textAlign="center">
+        Remembered password?{" "}
+        <Link component="button" onClick={switchToLogin} sx={{ fontWeight: 600 }}>
+          Login
+        </Link>
+      </Typography>
+    </Box>
   );
 };
 

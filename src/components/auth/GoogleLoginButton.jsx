@@ -1,7 +1,12 @@
 import { useEffect } from "react";
+import { useUser } from "../context/UserContext";
 import { authController } from "./authController";
+import { useNavigate } from "react-router-dom";
 
 const GoogleLoginButton = () => {
+  const { setUser } = useUser();
+  const navigate = useNavigate();
+
   useEffect(() => {
     /* global google */
     if (!window.google) return; // wait for Google script to load
@@ -27,9 +32,21 @@ const GoogleLoginButton = () => {
   const handleGoogleLogin = async (response) => {
     try {
       const idToken = response.credential;
-      const jwt = await authController.googleLogin(idToken);
-      localStorage.setItem("token", jwt);
-      window.location.href = "/dashboard";
+
+      // Backend should return { token, user }
+      const { token, user } = await authController.googleLogin(idToken);
+
+      if (!token || !user) throw new Error("Google login failed");
+
+      // Store both token and user
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Update UserContext immediately
+      setUser(user);
+
+      // Redirect to dashboard/home
+      navigate("/dashboard");
     } catch (error) {
       console.error("Google login failed:", error);
       alert("Google login failed");
@@ -39,7 +56,12 @@ const GoogleLoginButton = () => {
   return (
     <div
       id="google-login-btn"
-      style={{ width: "100%", display: "flex", justifyContent: "center", marginTop: "10px" }}
+      style={{
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        marginTop: "10px",
+      }}
     ></div>
   );
 };

@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import sellerApi from "../../api/sellerApi";
-import SellerLayout from "../../layouts/SellerLayout";
 import { useCart } from "../../context/CartContext.jsx";
+import SellerLayout from "../../layouts/SellerLayout.jsx"; // Include navbar & footer
+import softDarkTheme from "../../theme.js";
+import {
+  ThemeProvider,
+  Box,
+  Card,
+  CardMedia,
+  CardContent,
+  Typography,
+  Button,
+  CircularProgress,
+  Grid,
+} from "@mui/material";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const { cart, addToCart } = useCart();
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -14,29 +27,32 @@ const Products = () => {
       try {
         const data = await sellerApi.getProductListing();
 
-        // ⚠️ Ensure each product has variants
-        const normalized = data.map(p => ({
+        // Normalize products with placeholder images & empty variants
+        const normalized = data.map((p) => ({
           ...p,
           image: "/placeholder.png",
-          variants: p.variants || [] // ✅ enforce array
+          variants: p.variants || [],
         }));
 
         setProducts(normalized);
 
+        // Fetch real images
         const imagesData = await Promise.all(
-          normalized.map(p =>
+          normalized.map((p) =>
             sellerApi
               .getProductImages(p.productId)
-              .then(images => images[0]?.imageUrl || "/placeholder.png")
+              .then((images) => images[0]?.imageUrl || "/placeholder.png")
               .catch(() => "/placeholder.png")
           )
         );
 
-        setProducts(prev =>
+        setProducts((prev) =>
           prev.map((p, i) => ({ ...p, image: imagesData[i] }))
         );
       } catch (err) {
         console.error("Failed to fetch products:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -46,13 +62,12 @@ const Products = () => {
   const handleAddToCart = async (e, product) => {
     e.stopPropagation();
 
-    // ✅ STRICT variant check
     if (!product.variants.length) {
       alert("This product has no variants and cannot be added to cart");
       return;
     }
 
-    const variantId = product.variants[0].id; // ✅ REAL variant ID
+    const variantId = product.variants[0].id;
 
     try {
       await addToCart({
@@ -66,73 +81,111 @@ const Products = () => {
     }
   };
 
+  if (loading)
+    return (
+      <SellerLayout>
+        <Box textAlign="center" mt={5}>
+          <CircularProgress />
+        </Box>
+      </SellerLayout>
+    );
+
+  if (!products.length)
+    return (
+      <SellerLayout>
+        <Box textAlign="center" mt={5}>
+          <Typography>No products found.</Typography>
+        </Box>
+      </SellerLayout>
+    );
+
   return (
-    <SellerLayout>
-      <div className="container mt-4">
-        <h2>My Products</h2>
+    <ThemeProvider theme={softDarkTheme}>
+      <SellerLayout>
+        <Box className="container" mt={4} px={{ xs: 2, md: 4 }}>
+          <Typography variant="h4" color="primary" mb={3}>
+            My Products
+          </Typography>
 
-        <div className="row">
-          {products.length === 0 && (
-            <div className="col-12 text-center mt-4">
-              No products found.
-            </div>
-          )}
+          <Grid container spacing={4}>
+            {products.map((p) => {
+              const variantId = p.variants?.[0]?.id;
+              const inCart =
+                variantId &&
+                cart.some(
+                  (ci) => ci.productId === p.productId && ci.variantId === variantId
+                );
 
-          {products.map(p => {
-            const variantId = p.variants?.[0]?.id;
-            const inCart =
-              variantId &&
-              cart.some(
-                ci =>
-                  ci.productId === p.productId &&
-                  ci.variantId === variantId
-              );
+              return (
+                <Grid item xs={12} sm={6} md={4} key={p.productId}>
+                  <Card
+                    sx={{
+                      cursor: "pointer",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      transition: "transform 0.3s, box-shadow 0.3s",
+                      "&:hover": {
+                        transform: "translateY(-4px)",
+                        boxShadow: "0 12px 32px rgba(0,0,0,0.11)",
+                      },
+                    }}
+                    onClick={() => navigate(`/products/${p.productId}`)}
+                  >
+                    <CardMedia
+                      component="img"
+                      image={p.image}
+                      alt={p.name}
+                      sx={{
+                        height: 200,
+                        objectFit: "cover",
+                        transition: "transform 0.3s ease",
+                        "&:hover": { transform: "scale(1.05)" },
+                      }}
+                    />
 
-            return (
-              <div
-                key={p.productId}
-                className="col-md-4 mb-4"
-                onClick={() => navigate(`/products/${p.productId}`)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="card h-100">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="card-img-top"
-                    style={{ height: "200px", objectFit: "cover" }}
-                  />
-
-                  <div className="card-body d-flex flex-column justify-content-between">
-                    <div>
-                      <h5 className="card-title">{p.name}</h5>
-                      <p className="card-text">
-                        ₹{p.price?.toFixed(2) || "0.00"}
-                      </p>
-                      <p className="card-text text-muted">{p.brand}</p>
-                    </div>
-
-                    <button
-                      className={`btn mt-2 ${
-                        inCart ? "btn-secondary" : "btn-warning"
-                      }`}
-                      onClick={(e) => handleAddToCart(e, p)}
-                      disabled={inCart || !variantId}
+                    <CardContent
+                      sx={{
+                        flexGrow: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                      }}
                     >
-                      {!variantId
-                        ? "Variant Missing"
-                        : inCart
-                        ? "Already in Cart"
-                        : "Add to Cart"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </SellerLayout>
+                      <Box>
+                        <Typography variant="h6" gutterBottom>
+                          {p.name}
+                        </Typography>
+                        <Typography variant="subtitle1" color="text.secondary">
+                          ₹{p.price?.toFixed(2) || "0.00"}
+                        </Typography>
+                        <Typography variant="body2" color="secondary">
+                          {p.brand}
+                        </Typography>
+                      </Box>
+
+                      <Button
+                        variant="contained"
+                        color={inCart ? "secondary" : "primary"}
+                        disabled={inCart || !variantId}
+                        onClick={(e) => handleAddToCart(e, p)}
+                        sx={{ mt: 2 }}
+                      >
+                        {!variantId
+                          ? "Variant Missing"
+                          : inCart
+                          ? "Already in Cart"
+                          : "Add to Cart"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Box>
+      </SellerLayout>
+    </ThemeProvider>
   );
 };
 

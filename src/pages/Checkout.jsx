@@ -1,187 +1,270 @@
 import React, { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
+import { useUser } from "../context/UserContext";
 import { FaTrash } from "react-icons/fa";
 import { createOrder, createSubscription } from "../api/paymentApi";
+import {
+  Container,
+  Card,
+  Box,
+  Typography,
+  Button,
+  Stack,
+  IconButton,
+  Divider,
+  CircularProgress,
+  Grid,
+} from "@mui/material";
+import Navbar from "../components/layout/Navbar";
+import Footer from "../components/layout/Footer";
 
 const Checkout = () => {
-  const { cart, totalPrice, removeItem } = useCart();
+  const { cart, totalPrice, removeItem, updateQuantity } = useCart();
+  const { user } = useUser();
   const [items, setItems] = useState([]);
-  const [statusMessage, setStatusMessage] = useState(""); // New: status for UI
-  const userId = 1; // Example user ID
+  const [statusMessage, setStatusMessage] = useState("");
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => setItems(cart), [cart]);
 
-  // ===================== ONE-TIME PAYMENT =====================
+  const getSafeAmount = (amount) => Math.floor(amount / 1000) * 1000;
+
   const handlePayNow = async () => {
-    try {
-      setStatusMessage("📝 Creating order...");
-      console.log("📝 Creating order...");
-
-      const { orderId, key, amount } = await createOrder(totalPrice * 100, userId);
-      setStatusMessage(`✅ Order Created: ${orderId}`);
-      console.log(`✅ Order Created: ${orderId}`);
-
-      const testAmount = 36 * 100;
-      const payAmount = amount * 100 > testAmount ? testAmount : amount * 100;
-
-      const options = {
-        key,
-        amount: payAmount,
-        currency: "INR",
-        name: "AT_LUXE",
-        description: "Purchase Jewelry",
-        order_id: orderId,
-        prefill: { name: "John Doe", email: "john@example.com", contact: "9999999999" },
-        theme: { color: "#528FF0" },
-        handler: async function () {
-          setStatusMessage("💳 Payment processed. Verifying backend...");
-          console.log("💳 Payment processed. Verifying backend...");
-
-          let retries = 0;
-          const maxRetries = 10;
-
-          const interval = setInterval(async () => {
-            retries++;
-            try {
-              const res = await fetch(
-                `http://localhost:8080/auth/payment/status/check/${orderId}`
-              );
-              const data = await res.json();
-
-              if (data.status === "DUE") {
-                setStatusMessage(`⏳ Order Pending... (Attempt ${retries})`);
-                console.log(`⏳ Order Pending... (Attempt ${retries})`);
-              } else if (data.status === "PAID") {
-                setStatusMessage(`🎉 Order Paid! Payment ID: ${data.razorpayPaymentId}`);
-                console.log(`🎉 Order Paid! Payment ID: ${data.razorpayPaymentId}`);
-                clearInterval(interval);
-              } else {
-                setStatusMessage(`⚠️ Unknown status: ${data.status}`);
-                console.log(`⚠️ Unknown status: ${data.status}`);
-              }
-
-              if (retries >= maxRetries) {
-                setStatusMessage("⚠️ Max retries reached. Order still pending.");
-                console.log("⚠️ Max retries reached. Order still pending.");
-                clearInterval(interval);
-              }
-            } catch (err) {
-              console.error("Error checking status:", err);
-            }
-          }, 3000);
-        },
-      };
-
-      new window.Razorpay(options).open();
-    } catch (err) {
-      console.error("❌ Error creating order:", err);
-      setStatusMessage("❌ Payment could not be completed");
+    if (!user) {
+      setStatusMessage("⚠️ You must be logged in to place an order.");
+      return;
     }
+    if (!items || items.length === 0) {
+      setStatusMessage("⚠️ Your cart is empty.");
+      return;
+    }
+
+    setProcessing(true);
+    setStatusMessage("📝 Creating order...");
+    const safeAmount = getSafeAmount(totalPrice);
+    const razorpayAmount = safeAmount * 100;
+    const { orderId, key, amount, error } = await createOrder(razorpayAmount, user.id);
+
+    if (error) {
+      setStatusMessage(`❌ ${error}`);
+      setProcessing(false);
+      return;
+    }
+
+    const options = {
+      key,
+      amount,
+      currency: "INR",
+      name: "AT_LUXE",
+      description: `You will be charged ₹${safeAmount}`,
+      order_id: orderId,
+      prefill: {
+        name: user.name || "John Doe",
+        email: user.email || "john@example.com",
+        contact: user.contact || "9999999999",
+      },
+      theme: { color: "#4A2E2E" },
+      handler: async function () {
+        setStatusMessage("💳 Payment processed. Verifying backend...");
+      },
+    };
+
+    new window.Razorpay(options).open();
+    setProcessing(false);
   };
 
-  // ===================== SUBSCRIPTION PAYMENT =====================
   const handlePayMonthly = async () => {
-    try {
-      setStatusMessage("📝 Creating subscription...");
-      console.log("📝 Creating subscription...");
-
-      const { subscriptionId, key } = await createSubscription(userId);
-      setStatusMessage(`✅ Subscription Created: ${subscriptionId}`);
-      console.log(`✅ Subscription Created: ${subscriptionId}`);
-
-      const options = {
-        key,
-        subscription_id: subscriptionId,
-        name: "AT_LUXE",
-        description: "Monthly Subscription",
-        theme: { color: "#528FF0" },
-        handler: async function () {
-          setStatusMessage("💳 Subscription payment processed. Verifying backend...");
-          console.log("💳 Subscription payment processed. Verifying backend...");
-
-          let retries = 0;
-          const maxRetries = 10;
-
-          const interval = setInterval(async () => {
-            retries++;
-            try {
-              const res = await fetch(
-                `http://localhost:8080/auth/payment/status/check/${subscriptionId}`
-              );
-              const data = await res.json();
-
-              if (data.status === "PENDING") {
-                setStatusMessage(`⏳ Subscription Pending... (Attempt ${retries})`);
-                console.log(`⏳ Subscription Pending... (Attempt ${retries})`);
-              } else if (data.status === "ACTIVE") {
-                setStatusMessage("🎉 Subscription Activated!");
-                console.log("🎉 Subscription Activated!");
-                clearInterval(interval);
-              } else if (data.status === "HALTED") {
-                setStatusMessage("⚠️ Subscription Halted");
-                console.log("⚠️ Subscription Halted");
-                clearInterval(interval);
-              }
-
-              if (retries >= maxRetries) {
-                setStatusMessage("⚠️ Max retries reached. Subscription still pending.");
-                console.log("⚠️ Max retries reached. Subscription still pending.");
-                clearInterval(interval);
-              }
-            } catch (err) {
-              console.error("Error checking subscription:", err);
-            }
-          }, 3000);
-        },
-      };
-
-      new window.Razorpay(options).open();
-    } catch (err) {
-      console.error("❌ Subscription error:", err);
-      setStatusMessage("❌ Subscription could not be completed");
+    if (!user) {
+      setStatusMessage("⚠️ You must be logged in to subscribe.");
+      return;
     }
+    if (!items || items.length === 0) {
+      setStatusMessage("⚠️ Your cart is empty.");
+      return;
+    }
+
+    setProcessing(true);
+    setStatusMessage("📝 Creating subscription...");
+    const safeAmount = getSafeAmount(totalPrice);
+    const { subscriptionId, key, error } = await createSubscription(user.id);
+
+    if (error) {
+      setStatusMessage(`❌ ${error}`);
+      setProcessing(false);
+      return;
+    }
+
+    const options = {
+      key,
+      subscription_id: subscriptionId,
+      name: "AT_LUXE",
+      description: `You will be charged ₹${safeAmount} monthly`,
+      theme: { color: "#4A2E2E" },
+      handler: async function () {
+        setStatusMessage("💳 Subscription payment processed. Verifying backend...");
+      },
+    };
+
+    new window.Razorpay(options).open();
+    setProcessing(false);
   };
 
   return (
-    <div className="cart-container">
-      <h2>Checkout</h2>
+    <>
+      <Navbar />
 
-      {/* ======= Status Display ======= */}
-      {statusMessage && (
-        <div style={{ margin: "10px 0", padding: "8px", background: "#f0f0f0", borderRadius: "5px" }}>
-          {statusMessage}
-        </div>
-      )}
+      <Container sx={{ py: 6, maxWidth: "lg" }}>
+        <Typography variant="h4" gutterBottom textAlign="center">
+          Checkout
+        </Typography>
 
-      {items.length === 0 && <p>Your cart is empty</p>}
+        {statusMessage && (
+          <Box
+            sx={{
+              mb: 4,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "#EFE8E3",
+              color: "#3A2C2C",
+            }}
+          >
+            {statusMessage}
+          </Box>
+        )}
 
-      {items.map((item) => (
-        <div key={item.cartItemId} className="cart-item">
-          <img
-            src={item.image || "/placeholder.png"}
-            alt={item.productName}
-            width={80}
-            height={80}
-          />
-          <div>
-            <p>{item.productName}</p>
-            {item.variantId && <p>Variant: {item.variantId}</p>}
-            <p>Qty: {item.quantity}</p>
-            <p>Price: ₹{item.price.toFixed(2)}</p>
-          </div>
-          <div>₹{(item.price * item.quantity).toFixed(2)}</div>
-          <div onClick={() => removeItem(item.cartItemId)}>
-            <FaTrash />
-          </div>
-        </div>
-      ))}
+        {items.length === 0 ? (
+          <Typography textAlign="center" color="text.secondary" sx={{ mt: 4 }}>
+            Your cart is empty
+          </Typography>
+        ) : (
+          <>
+            <Stack spacing={2}>
+              {items.map((item) => (
+                <Card
+                  key={item.cartItemId}
+                  variant="outlined"
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                    p: 2,
+                    borderRadius: 2,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+                    flexDirection: { xs: "column", sm: "row" },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={item.image || "/placeholder.png"}
+                    alt={item.productName}
+                    sx={{
+                      width: { xs: "100%", sm: 120 },
+                      height: 120,
+                      objectFit: "cover",
+                      borderRadius: 2,
+                    }}
+                  />
 
-      <hr />
-      <p>Total: ₹{totalPrice.toFixed(2)}</p>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={600}>
+                        {item.productName}
+                      </Typography>
+                      {item.variantId && (
+                        <Typography variant="caption" color="text.secondary">
+                          Variant: {item.variantId}
+                        </Typography>
+                      )}
+                      <Typography variant="body2" color="text.secondary">
+                        ₹{item.price.toFixed(2)}
+                      </Typography>
+                    </Box>
 
-      <button onClick={handlePayNow}>Pay Now</button>
-      <button onClick={handlePayMonthly}>Pay Monthly</button>
-    </div>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: { xs: 1, sm: 0 } }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        disabled={item.quantity <= 1}
+                        onClick={() => updateQuantity(item, item.quantity - 1)}
+                      >
+                        −
+                      </Button>
+                      <Typography>{item.quantity}</Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => updateQuantity(item, item.quantity + 1)}
+                      >
+                        +
+                      </Button>
+                      <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+                      <IconButton onClick={() => removeItem(item.cartItemId)} color="error">
+                        <FaTrash />
+                      </IconButton>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ minWidth: 80, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                    <Typography fontWeight={600}>₹{(item.price * item.quantity).toFixed(2)}</Typography>
+                  </Box>
+                </Card>
+              ))}
+            </Stack>
+
+            {/* Total & Highlighted Minimal Buttons */}
+            <Card sx={{ mt: 4, p: 3, borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}>
+              <Grid container justifyContent="space-between" alignItems="center">
+                <Typography variant="h6" fontWeight={600}>
+                  Total: ₹{totalPrice.toFixed(2)}
+                </Typography>
+
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="primary"
+                    onClick={handlePayNow}
+                    disabled={processing || !user}
+                    sx={{
+                      textTransform: "none",
+                      minWidth: 100,
+                      py: 0.5,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {processing ? <CircularProgress size={16} /> : "Pay Now"}
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="primary"
+                    onClick={handlePayMonthly}
+                    disabled={processing || !user}
+                    sx={{
+                      textTransform: "none",
+                      minWidth: 100,
+                      py: 0.5,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Pay Monthly
+                  </Button>
+                </Stack>
+              </Grid>
+            </Card>
+          </>
+        )}
+      </Container>
+
+      <Footer />
+    </>
   );
 };
 
