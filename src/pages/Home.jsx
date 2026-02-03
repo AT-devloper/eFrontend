@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Box, Typography, Button, MobileStepper } from "@mui/material";
 import SwipeableViews from "react-swipeable-views";
+import { autoPlay } from "react-swipeable-views-utils";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import { autoPlay } from "react-swipeable-views-utils";
 
 const AutoPlaySwipeableViews = autoPlay(SwipeableViews);
 
@@ -11,127 +12,115 @@ const slides = [
   {
     title: "Wedding Jewellery",
     subtitle: "Crafted for your most sacred moments",
-    img: "https://images.unsplash.com/photo-1575730216745-1d4f905bc2d2",
+    img: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2070",
     link: "/products",
   },
   {
     title: "Bridal Collections",
     subtitle: "Inspired by tradition & elegance",
-    img: "https://images.unsplash.com/photo-1613981239658-0ff7f2b3d1f1",
-    link: "/products",
-  },
-  {
-    title: "Festive Gold",
-    subtitle: "Celebrate every sparkle",
-    img: "",
+    img: "https://images.unsplash.com/photo-1613981239658-0ff7f2b3d1f1?q=80&w=2070",
     link: "/products",
   },
 ];
 
 export default function Home() {
   const [activeStep, setActiveStep] = useState(0);
-  const maxSteps = slides.length;
-
-  const handleStepChange = (step) => {
-    setActiveStep(step);
-  };
 
   return (
-    <>
+    <Box sx={{ overflowX: "hidden" }}>
       <Navbar />
 
-      {/* Full-Screen Hero Carousel */}
-      <Box sx={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
+      <Box sx={{ position: "relative", height: "100vh", width: "100vw" }}>
         <AutoPlaySwipeableViews
           index={activeStep}
-          onChangeIndex={handleStepChange}
+          onChangeIndex={(s) => setActiveStep(s)}
           enableMouseEvents
-          style={{ height: "100%" }}
+          interval={6000} // Slower for a premium feel
         >
           {slides.map((slide, index) => (
             <Box
               key={index}
               sx={{
-                height: "100vh",          // Full viewport height
-                width: "100vw",           // Full viewport width
+                height: "100vh",
+                width: "100vw",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
-                textAlign: "center",
-                color: "#5E3B3B",         // Faded burgundy text
-                background: `linear-gradient(
-                  rgba(250, 244, 237, 0.5), 
-                  rgba(222, 190, 150, 0.5) 70%
-                ), url(${slide.img}) center/cover no-repeat`,
-                px: 2,
+                background: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${slide.img}) center/cover no-repeat`,
+                px: 3,
               }}
             >
-              <Typography
-                variant="h2"
-                sx={{
-                  fontWeight: 700,
-                  mb: 2,
-                  textShadow: "1px 1px 6px rgba(0,0,0,0.15)",
-                }}
-              >
-                {slide.title}
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  mb: 3,
-                  fontWeight: 400,
-                  color: "rgba(94, 59, 59, 0.85)",
-                }}
-              >
-                {slide.subtitle}
-              </Typography>
-              <Button
-                variant="contained"
-                color="secondary"
-                href={slide.link}
-                sx={{
-                  background: "linear-gradient(135deg, #D8B67B, #E6CFA0)",
-                  color: "#5E3B3B",
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 3,
-                  fontWeight: 600,
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    opacity: 0.95,
-                    transform: "translateY(-2px)",
-                    background: "linear-gradient(135deg, #E6CFA0, #D8B67B)",
-                  },
-                }}
-              >
-                Explore Collections
-              </Button>
+              {/* Animated Text Container */}
+              <AnimatePresence mode="wait">
+                {activeStep === index && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    style={{ textAlign: "center" }}
+                  >
+                    <Typography
+                      variant="h1"
+                      sx={{
+                        fontFamily: "'Playfair Display', serif",
+                        color: "#fff",
+                        fontSize: { xs: "3rem", md: "5rem" },
+                        fontWeight: 700,
+                        mb: 1,
+                      }}
+                    >
+                      {slide.title}
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{ color: "rgba(255,255,255,0.9)", mb: 4, letterSpacing: 2 }}
+                    >
+                      {slide.subtitle}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      sx={{
+                        bgcolor: "secondary.main",
+                        color: "primary.main",
+                        px: 6,
+                        py: 2,
+                        borderRadius: 0, // Sharp edges feel more "Vogue"
+                        fontSize: "0.9rem",
+                        fontWeight: 900,
+                        letterSpacing: 2,
+                        "&:hover": { bgcolor: "#fff" },
+                      }}
+                    >
+                      DISCOVER MORE
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Box>
           ))}
         </AutoPlaySwipeableViews>
 
-        {/* Step Indicator */}
-        <MobileStepper
-          steps={maxSteps}
-          position="static"
-          activeStep={activeStep}
+        {/* Floating Scroll Indicator */}
+        <Box
+          component={motion.div}
+          animate={{ y: [0, 10, 0] }}
+          transition={{ repeat: Infinity, duration: 2 }}
           sx={{
-            background: "transparent",
-            justifyContent: "center",
-            mt: -8,
-            "& .MuiMobileStepper-dot": {
-              backgroundColor: "rgba(94, 59, 59, 0.3)",
-            },
-            "& .MuiMobileStepper-dotActive": {
-              backgroundColor: "#D8B67B",
-            },
+            position: "absolute",
+            bottom: 40,
+            left: "50%",
+            transform: "translateX(-50%)",
+            color: "#fff",
+            opacity: 0.6,
           }}
-        />
+        >
+          <Typography variant="caption" sx={{ letterSpacing: 3 }}>SCROLL</Typography>
+        </Box>
       </Box>
 
       <Footer />
-    </>
+    </Box>
   );
 }

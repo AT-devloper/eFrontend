@@ -1,191 +1,190 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import sellerApi from "../../api/sellerApi";
 import { useCart } from "../../context/CartContext.jsx";
-import SellerLayout from "../../layouts/SellerLayout.jsx"; // Include navbar & footer
-import softDarkTheme from "../../theme.js";
-import {
-  ThemeProvider,
-  Box,
-  Card,
-  CardMedia,
-  CardContent,
-  Typography,
-  Button,
-  CircularProgress,
-  Grid,
-} from "@mui/material";
+import SellerLayout from "../../layouts/SellerLayout.jsx";
+import { Box, Typography, Grid, Container, Skeleton } from "@mui/material";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
-  const { cart, addToCart } = useCart();
   const [loading, setLoading] = useState(true);
+  const { cart, addToCart } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const data = await sellerApi.getProductListing();
-
-        // Normalize products with placeholder images & empty variants
-        const normalized = data.map((p) => ({
-          ...p,
-          image: "/placeholder.png",
-          variants: p.variants || [],
-        }));
-
-        setProducts(normalized);
-
-        // Fetch real images
         const imagesData = await Promise.all(
-          normalized.map((p) =>
-            sellerApi
-              .getProductImages(p.productId)
+          data.map((p) =>
+            sellerApi.getProductImages(p.productId)
               .then((images) => images[0]?.imageUrl || "/placeholder.png")
               .catch(() => "/placeholder.png")
           )
         );
-
-        setProducts((prev) =>
-          prev.map((p, i) => ({ ...p, image: imagesData[i] }))
-        );
-      } catch (err) {
-        console.error("Failed to fetch products:", err);
+        setProducts(data.map((p, i) => ({ ...p, image: imagesData[i] })));
       } finally {
         setLoading(false);
       }
     };
-
     fetchProducts();
   }, []);
 
-  const handleAddToCart = async (e, product) => {
-    e.stopPropagation();
+  return (
+    <SellerLayout>
+      <Box sx={{ bgcolor: "#F2F0ED", minHeight: "100vh", py: 10 }}>
+        <Container maxWidth="xl">
+          {/* Subtle Hero Branding */}
+          <Box sx={{ mb: 12, textAlign: "center" }}>
+            <Typography variant="h1" sx={{ 
+              fontFamily: "'Playfair Display', serif", 
+              fontSize: { xs: "3rem", md: "7rem" },
+              fontWeight: 900,
+              color: "rgba(0,0,0,0.05)",
+              position: "absolute",
+              left: 0, right: 0,
+              zIndex: 0,
+              textTransform: "uppercase"
+            }}>
+              The Curator
+            </Typography>
+            <Typography variant="h4" sx={{ 
+              position: "relative", 
+              zIndex: 1, 
+              fontFamily: "'Playfair Display', serif", 
+              pt: 4,
+              color: "#222"
+            }}>
+              Essential Pieces
+            </Typography>
+          </Box>
 
-    if (!product.variants.length) {
-      alert("This product has no variants and cannot be added to cart");
-      return;
-    }
+          <Grid container spacing={10}>
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <Grid item xs={12} md={4} key={i}>
+                  <Skeleton variant="circular" width={300} height={300} sx={{ mx: "auto" }} />
+                </Grid>
+              ))
+            ) : (
+              products.map((p, index) => (
+                <ProductBubble 
+                  key={p.productId} 
+                  product={p} 
+                  index={index} 
+                  navigate={navigate} 
+                  addToCart={addToCart}
+                  inCart={cart.some(ci => ci.productId === p.productId)}
+                />
+              ))
+            )}
+          </Grid>
+        </Container>
+      </Box>
+    </SellerLayout>
+  );
+};
 
-    const variantId = product.variants[0].id;
-
-    try {
-      await addToCart({
-        productId: product.productId,
-        variantId,
-        quantity: 1,
-      });
-    } catch (err) {
-      console.error("Failed to add item to cart:", err);
-      alert("⚠️ Could not add to cart");
-    }
-  };
-
-  if (loading)
-    return (
-      <SellerLayout>
-        <Box textAlign="center" mt={5}>
-          <CircularProgress />
-        </Box>
-      </SellerLayout>
-    );
-
-  if (!products.length)
-    return (
-      <SellerLayout>
-        <Box textAlign="center" mt={5}>
-          <Typography>No products found.</Typography>
-        </Box>
-      </SellerLayout>
-    );
+const ProductBubble = ({ product, index, navigate, addToCart, inCart }) => {
+  const [hover, setHover] = useState(false);
 
   return (
-    <ThemeProvider theme={softDarkTheme}>
-      <SellerLayout>
-        <Box className="container" mt={4} px={{ xs: 2, md: 4 }}>
-          <Typography variant="h4" color="primary" mb={3}>
-            My Products
-          </Typography>
-
-          <Grid container spacing={4}>
-            {products.map((p) => {
-              const variantId = p.variants?.[0]?.id;
-              const inCart =
-                variantId &&
-                cart.some(
-                  (ci) => ci.productId === p.productId && ci.variantId === variantId
-                );
-
-              return (
-                <Grid item xs={12} sm={6} md={4} key={p.productId}>
-                  <Card
-                    sx={{
-                      cursor: "pointer",
-                      height: "100%",
-                      display: "flex",
-                      flexDirection: "column",
-                      transition: "transform 0.3s, box-shadow 0.3s",
-                      "&:hover": {
-                        transform: "translateY(-4px)",
-                        boxShadow: "0 12px 32px rgba(0,0,0,0.11)",
-                      },
-                    }}
-                    onClick={() => navigate(`/products/${p.productId}`)}
-                  >
-                    <CardMedia
-                      component="img"
-                      image={p.image}
-                      alt={p.name}
-                      sx={{
-                        height: 200,
-                        objectFit: "cover",
-                        transition: "transform 0.3s ease",
-                        "&:hover": { transform: "scale(1.05)" },
-                      }}
-                    />
-
-                    <CardContent
-                      sx={{
-                        flexGrow: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="h6" gutterBottom>
-                          {p.name}
-                        </Typography>
-                        <Typography variant="subtitle1" color="text.secondary">
-                          ₹{p.price?.toFixed(2) || "0.00"}
-                        </Typography>
-                        <Typography variant="body2" color="secondary">
-                          {p.brand}
-                        </Typography>
-                      </Box>
-
-                      <Button
-                        variant="contained"
-                        color={inCart ? "secondary" : "primary"}
-                        disabled={inCart || !variantId}
-                        onClick={(e) => handleAddToCart(e, p)}
-                        sx={{ mt: 2 }}
-                      >
-                        {!variantId
-                          ? "Variant Missing"
-                          : inCart
-                          ? "Already in Cart"
-                          : "Add to Cart"}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
+    <Grid item xs={12} sm={6} md={4}>
+      <Box
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        onClick={() => navigate(`/products/${product.productId}`)}
+        sx={{ position: "relative", textAlign: "center", cursor: "pointer" }}
+      >
+        {/* The "Bubble" Container */}
+        <Box
+          component={motion.div}
+          animate={{ 
+            borderRadius: hover ? "30% 70% 70% 30% / 30% 30% 70% 70%" : "50%",
+            scale: hover ? 1.05 : 1
+          }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          sx={{
+            width: "100%",
+            aspectRatio: "1/1",
+            overflow: "hidden",
+            bgcolor: "#fff",
+            boxShadow: hover ? "0 40px 100px rgba(0,0,0,0.1)" : "0 10px 40px rgba(0,0,0,0.02)",
+            position: "relative",
+            zIndex: 1
+          }}
+        >
+          <motion.img
+            src={product.image}
+            animate={{ scale: hover ? 1.1 : 1.05 }}
+            transition={{ duration: 1.5 }}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          
+          {/* Quick Add Overlay Circle */}
+          <AnimatePresence>
+            {hover && (
+              <Box
+                component={motion.div}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addToCart({ productId: product.productId, variantId: product.variants[0]?.id, quantity: 1 });
+                }}
+                sx={{
+                  position: "absolute",
+                  bottom: 20, right: 20,
+                  width: 80, height: 80,
+                  bgcolor: "#D8B67B",
+                  borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontWeight: 900, fontSize: "0.6rem", textAlign: "center",
+                  boxShadow: "0 10px 20px rgba(216, 182, 123, 0.4)",
+                  zIndex: 10
+                }}
+              >
+                {inCart ? "OWNED" : "ADD +"}
+              </Box>
+            )}
+          </AnimatePresence>
         </Box>
-      </SellerLayout>
-    </ThemeProvider>
+
+        {/* Floating Typography Details */}
+        <Box sx={{ mt: -4, position: "relative", zIndex: 2 }}>
+          <Typography
+            sx={{
+              display: "inline-block",
+              bgcolor: "#000",
+              color: "#fff",
+              px: 2, py: 0.5,
+              fontSize: "0.6rem",
+              letterSpacing: 3,
+              fontWeight: 800,
+              textTransform: "uppercase"
+            }}
+          >
+            {product.brand || "Selection"}
+          </Typography>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontFamily: "'Playfair Display', serif", 
+              fontWeight: 900, 
+              mt: 1,
+              color: "#1a1a1a"
+            }}
+          >
+            {product.name}
+          </Typography>
+          <Typography sx={{ fontWeight: 300, color: "#777", mt: 0.5 }}>
+            ₹{product.price?.toLocaleString()}
+          </Typography>
+        </Box>
+      </Box>
+    </Grid>
   );
 };
 

@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import { Box, Card, Button, Fade } from "@mui/material";
+import { Box, Card, Button, Fade, Typography } from "@mui/material";
 import Login from "../../pages/Login";
 import Register from "../../pages/Register";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 
 const AuthToggleCard = () => {
-  const [activeTab, setActiveTab] = useState("login"); // 'login' | 'register' | 'forgot' | 'reset'
-  const [resetToken, setResetToken] = useState(null); // For ResetPassword page
+  const [activeTab, setActiveTab] = useState("login");
+  const [resetToken, setResetToken] = useState(null);
 
   const switchToLogin = () => setActiveTab("login");
   const switchToRegister = () => setActiveTab("register");
@@ -20,35 +20,59 @@ const AuthToggleCard = () => {
   return (
     <Card
       sx={{
-        maxWidth: 400,
+        maxWidth: 420,
         mx: "auto",
         mt: 8,
-        p: 3,
-        borderRadius: 4,
+        p: 4,
+        borderRadius: 6,
         backgroundColor: "background.paper",
-        boxShadow: 3,
+        boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
       }}
     >
-      {/* Only show toggle buttons for login/register */}
+      {/* Branding inside the card */}
+      <Box sx={{ textAlign: "center", mb: 3 }}>
+        <Typography variant="h4" sx={{ fontFamily: "Playfair Display", fontWeight: 900, color: "primary.main" }}>AT</Typography>
+        <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "primary.light" }}>Luxe</Typography>
+      </Box>
+
+      {/* Modern Pill Toggle */}
       {(activeTab === "login" || activeTab === "register") && (
         <Box
           sx={{
             display: "flex",
             position: "relative",
-            backgroundColor: "#f0f0f0",
+            backgroundColor: "rgba(0,0,0,0.04)",
             borderRadius: 50,
-            overflow: "hidden",
-            mb: 3,
-            border: "1px solid #ddd",
+            p: 0.5,
+            mb: 4,
+            border: "1px solid rgba(0,0,0,0.05)",
           }}
         >
+          {/* Sliding Background */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: 4,
+              bottom: 4,
+              left: activeTab === "login" ? 4 : "50%",
+              width: "calc(50% - 4px)",
+              bgcolor: "primary.main",
+              borderRadius: 50,
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              zIndex: 0,
+              boxShadow: "0 4px 12px rgba(74, 46, 46, 0.2)",
+            }}
+          />
           <Button
             fullWidth
             onClick={switchToLogin}
             sx={{
-              color: activeTab === "login" ? "#fff" : "text.primary",
-              fontWeight: 600,
+              borderRadius: 50,
+              color: activeTab === "login" ? "#fff" : "text.secondary",
+              fontWeight: 700,
               zIndex: 1,
+              py: 1,
+              "&:hover": { bgcolor: "transparent" },
             }}
           >
             Login
@@ -57,57 +81,41 @@ const AuthToggleCard = () => {
             fullWidth
             onClick={switchToRegister}
             sx={{
-              color: activeTab === "register" ? "#fff" : "text.primary",
-              fontWeight: 600,
+              borderRadius: 50,
+              color: activeTab === "register" ? "#fff" : "text.secondary",
+              fontWeight: 700,
               zIndex: 1,
+              py: 1,
+              "&:hover": { bgcolor: "transparent" },
             }}
           >
             Register
           </Button>
-
-          {/* Sliding Indicator */}
-          <Box
-            sx={{
-              position: "absolute",
-              top: 0,
-              left: activeTab === "login" ? 0 : "50%",
-              width: "50%",
-              height: "100%",
-              bgcolor: "primary.main",
-              borderRadius: "50px",
-              transition: "left 0.3s ease",
-              zIndex: 0,
-            }}
-          />
         </Box>
       )}
 
-      {/* Forms */}
-      <Box sx={{ position: "relative", minHeight: 350 }}>
-        {/* Login */}
+      {/* Forms Container */}
+      <Box sx={{ position: "relative" }}>
         <Fade in={activeTab === "login"} unmountOnExit>
-          <Box sx={{ position: activeTab === "login" ? "relative" : "absolute", width: "100%" }}>
+          <Box>
             <Login switchToRegister={switchToRegister} switchToForgot={switchToForgot} />
           </Box>
         </Fade>
 
-        {/* Register */}
         <Fade in={activeTab === "register"} unmountOnExit>
-          <Box sx={{ position: activeTab === "register" ? "relative" : "absolute", width: "100%" }}>
+          <Box>
             <Register switchToLogin={switchToLogin} />
           </Box>
         </Fade>
 
-        {/* Forgot Password */}
         <Fade in={activeTab === "forgot"} unmountOnExit>
-          <Box sx={{ position: activeTab === "forgot" ? "relative" : "absolute", width: "100%" }}>
+          <Box>
             <ForgotPassword switchToLogin={switchToLogin} switchToReset={switchToReset} />
           </Box>
         </Fade>
 
-        {/* Reset Password */}
         <Fade in={activeTab === "reset"} unmountOnExit>
-          <Box sx={{ position: activeTab === "reset" ? "relative" : "absolute", width: "100%" }}>
+          <Box>
             <ResetPassword token={resetToken} switchToLogin={switchToLogin} />
           </Box>
         </Fade>
