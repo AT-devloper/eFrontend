@@ -5,14 +5,18 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CartProvider } from "./context/CartContext";
 import { UserProvider } from "./context/UserContext";
+import GlobalLoader from "./GlobalLoader";// Import the new loader
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Resets default CSS */}
+      <CssBaseline />
       <UserProvider>
         <CartProvider>
-          <AppRoutes />
+          {/* Wrap AppRoutes with the GlobalLoader */}
+          <GlobalLoader>
+            <AppRoutes />
+          </GlobalLoader>
 
           <ToastContainer
             position="top-right"
@@ -21,6 +25,7 @@ function App() {
             newestOnTop
             closeOnClick
             pauseOnHover
+            style={{ zIndex: 100000 }} // Ensure toast is above the loader if needed
           />
         </CartProvider>
       </UserProvider>

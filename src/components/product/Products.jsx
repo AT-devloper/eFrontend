@@ -1,16 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { FaPlus, FaSearch, FaChevronDown } from "react-icons/fa";
 import sellerApi from "../../api/sellerApi";
 import { useCart } from "../../context/CartContext.jsx";
 import SellerLayout from "../../layouts/SellerLayout.jsx";
-import { Box, Typography, Grid, Container, Skeleton } from "@mui/material";
+import { 
+  Box, Typography, Grid, Container, Skeleton, IconButton, 
+  InputBase, Paper, Stack, Menu, MenuItem, Button 
+} from "@mui/material";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [sortBy, setSortBy] = useState("Featured");
+
   const { cart, addToCart } = useCart();
   const navigate = useNavigate();
+
+  // Dynamically extract categories from data to ensure background logic never fails
+  const categories = ["All", "Rings", "Necklaces", "Earrings", "Bracelets", "Engagement"];
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -23,7 +36,9 @@ const Products = () => {
               .catch(() => "/placeholder.png")
           )
         );
-        setProducts(data.map((p, i) => ({ ...p, image: imagesData[i] })));
+        const mappedData = data.map((p, i) => ({ ...p, image: imagesData[i] }));
+        setProducts(mappedData);
+        setFilteredProducts(mappedData);
       } finally {
         setLoading(false);
       }
@@ -31,156 +46,171 @@ const Products = () => {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    let result = [...products];
+    if (selectedCategory !== "All") result = result.filter((p) => p.category === selectedCategory);
+    if (searchQuery) result = result.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (sortBy === "Price: Low to High") result.sort((a, b) => a.price - b.price);
+    if (sortBy === "Price: High to Low") result.sort((a, b) => b.price - a.price);
+
+    setFilteredProducts(result);
+  }, [searchQuery, selectedCategory, products, sortBy]);
+
   return (
     <SellerLayout>
-      <Box sx={{ bgcolor: "#F2F0ED", minHeight: "100vh", py: 10 }}>
-        <Container maxWidth="xl">
-          {/* Subtle Hero Branding */}
-          <Box sx={{ mb: 12, textAlign: "center" }}>
-            <Typography variant="h1" sx={{ 
-              fontFamily: "'Playfair Display', serif", 
-              fontSize: { xs: "3rem", md: "7rem" },
-              fontWeight: 900,
-              color: "rgba(0,0,0,0.05)",
-              position: "absolute",
-              left: 0, right: 0,
-              zIndex: 0,
-              textTransform: "uppercase"
-            }}>
-              The Curator
-            </Typography>
-            <Typography variant="h4" sx={{ 
-              position: "relative", 
-              zIndex: 1, 
-              fontFamily: "'Playfair Display', serif", 
-              pt: 4,
-              color: "#222"
-            }}>
-              Essential Pieces
-            </Typography>
-          </Box>
+      {/* Background set to pure white to blend with product image backgrounds */}
+      <Box sx={{ bgcolor: "#ffffff", minHeight: "100vh" }}>
+        
+        {/* REFINED STICKY NAV */}
+        <Box sx={{ 
+          position: "sticky", top: 0, zIndex: 1100, 
+          bgcolor: "rgba(255,255,255,0.9)", backdropFilter: "blur(15px)",
+          borderBottom: "1px solid #eee", py: 2 
+        }}>
+          <Container maxWidth="lg">
+            <Stack direction="row" alignItems="center" spacing={4} sx={{ mb: 2 }}>
+              <Typography variant="h5" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, letterSpacing: -0.5 }}>
+                AT-LUXE
+              </Typography>
+              
+              <Paper elevation={0} sx={{ display: "flex", alignItems: "center", px: 2, py: 0.8, bgcolor: "#f5f5f5", borderRadius: "4px", flex: 1, maxWidth: "400px" }}>
+                <FaSearch size={12} color="#999" />
+                <InputBase
+                  placeholder="Search the archive..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{ ml: 1, fontSize: "0.85rem", width: "100%" }}
+                />
+              </Paper>
 
-          <Grid container spacing={10}>
+              <Button 
+                onClick={(e) => setAnchorEl(e.currentTarget)}
+                endIcon={<FaChevronDown size={10} />}
+                sx={{ color: "#000", textTransform: "none", fontSize: "0.8rem", fontWeight: 700 }}
+              >
+                {sortBy === "Featured" ? "SORT" : sortBy.toUpperCase()}
+              </Button>
+            </Stack>
+
+            <Stack direction="row" spacing={4} sx={{ overflowX: "auto", "&::-webkit-scrollbar": { display: "none" } }}>
+              {categories.map((cat) => (
+                <Typography
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  sx={{
+                    fontSize: "0.7rem", letterSpacing: 1.5, cursor: "pointer",
+                    fontWeight: 800,
+                    color: selectedCategory === cat ? "#D4AF37" : "#aaa",
+                    borderBottom: selectedCategory === cat ? "2px solid #D4AF37" : "2px solid transparent",
+                    pb: 1, transition: "0.3s", whiteSpace: "nowrap"
+                  }}
+                >
+                  {cat.toUpperCase()}
+                </Typography>
+              ))}
+            </Stack>
+          </Container>
+        </Box>
+
+        <Container maxWidth="lg" sx={{ py: 8 }}>
+          <Grid container spacing={5}>
             {loading ? (
-              [1, 2, 3].map((i) => (
-                <Grid item xs={12} md={4} key={i}>
-                  <Skeleton variant="circular" width={300} height={300} sx={{ mx: "auto" }} />
+              [1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <Grid item xs={6} md={3} key={i}>
+                  <Skeleton variant="rectangular" height={350} sx={{ bgcolor: "#f9f9f9" }} />
                 </Grid>
               ))
-            ) : (
-              products.map((p, index) => (
-                <ProductBubble 
-                  key={p.productId} 
-                  product={p} 
-                  index={index} 
-                  navigate={navigate} 
-                  addToCart={addToCart}
-                  inCart={cart.some(ci => ci.productId === p.productId)}
-                />
-              ))
-            )}
+            ) : filteredProducts.map((p) => (
+              <JewelryCard 
+                key={p.productId} 
+                product={p} 
+                navigate={navigate} 
+                addToCart={addToCart}
+                inCart={cart.some(ci => ci.productId === p.productId)}
+              />
+            ))}
           </Grid>
         </Container>
+
+        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+          <MenuItem onClick={() => { setSortBy("Featured"); setAnchorEl(null); }}>Featured</MenuItem>
+          <MenuItem onClick={() => { setSortBy("Price: Low to High"); setAnchorEl(null); }}>Price: Low to High</MenuItem>
+          <MenuItem onClick={() => { setSortBy("Price: High to Low"); setAnchorEl(null); }}>Price: High to Low</MenuItem>
+        </Menu>
       </Box>
     </SellerLayout>
   );
 };
 
-const ProductBubble = ({ product, index, navigate, addToCart, inCart }) => {
+const JewelryCard = ({ product, navigate, addToCart, inCart }) => {
   const [hover, setHover] = useState(false);
 
   return (
-    <Grid item xs={12} sm={6} md={4}>
+    <Grid item xs={6} md={3}>
       <Box
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         onClick={() => navigate(`/products/${product.productId}`)}
-        sx={{ position: "relative", textAlign: "center", cursor: "pointer" }}
+        sx={{ textAlign: "center", cursor: "pointer" }}
       >
-        {/* The "Bubble" Container */}
-        <Box
-          component={motion.div}
-          animate={{ 
-            borderRadius: hover ? "30% 70% 70% 30% / 30% 30% 70% 70%" : "50%",
-            scale: hover ? 1.05 : 1
-          }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          sx={{
-            width: "100%",
-            aspectRatio: "1/1",
-            overflow: "hidden",
-            bgcolor: "#fff",
-            boxShadow: hover ? "0 40px 100px rgba(0,0,0,0.1)" : "0 10px 40px rgba(0,0,0,0.02)",
-            position: "relative",
-            zIndex: 1
-          }}
-        >
+        {/* Transparent Background Logic */}
+        <Box sx={{ 
+          position: "relative", 
+          overflow: "hidden", 
+          bgcolor: "#ffffff", // Pure white to match typical product photography
+          aspectRatio: "1/1.2", 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "center",
+          transition: "0.4s ease-in-out",
+          transform: hover ? "translateY(-5px)" : "none"
+        }}>
           <motion.img
             src={product.image}
-            animate={{ scale: hover ? 1.1 : 1.05 }}
-            transition={{ duration: 1.5 }}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            animate={{ scale: hover ? 1.05 : 1 }}
+            transition={{ duration: 0.5 }}
+            style={{ 
+                maxWidth: "90%", 
+                maxHeight: "90%", 
+                objectFit: "contain",
+                // This mixBlendMode helps remove slightly off-white backgrounds from images
+                mixBlendMode: "multiply" 
+            }}
           />
           
-          {/* Quick Add Overlay Circle */}
-          <AnimatePresence>
-            {hover && (
-              <Box
-                component={motion.div}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addToCart({ productId: product.productId, variantId: product.variants[0]?.id, quantity: 1 });
-                }}
-                sx={{
-                  position: "absolute",
-                  bottom: 20, right: 20,
-                  width: 80, height: 80,
-                  bgcolor: "#D8B67B",
-                  borderRadius: "50%",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontWeight: 900, fontSize: "0.6rem", textAlign: "center",
-                  boxShadow: "0 10px 20px rgba(216, 182, 123, 0.4)",
-                  zIndex: 10
-                }}
-              >
-                {inCart ? "OWNED" : "ADD +"}
-              </Box>
-            )}
-          </AnimatePresence>
+          <IconButton
+            onClick={(e) => {
+              e.stopPropagation();
+              addToCart({ productId: product.productId, variantId: product.variants?.[0]?.id, quantity: 1 });
+            }}
+            sx={{
+              position: "absolute", bottom: 15,
+              bgcolor: inCart ? "#D4AF37" : "#000",
+              color: "#fff",
+              opacity: hover ? 1 : 0,
+              transform: hover ? "translateY(0)" : "translateY(10px)",
+              borderRadius: "0px",
+              width: "80%",
+              fontSize: "0.6rem",
+              fontWeight: 900,
+              transition: "0.3s",
+              "&:hover": { bgcolor: "#D4AF37" }
+            }}
+          >
+            {inCart ? "IN CART" : "QUICK ADD"}
+          </IconButton>
         </Box>
 
-        {/* Floating Typography Details */}
-        <Box sx={{ mt: -4, position: "relative", zIndex: 2 }}>
-          <Typography
-            sx={{
-              display: "inline-block",
-              bgcolor: "#000",
-              color: "#fff",
-              px: 2, py: 0.5,
-              fontSize: "0.6rem",
-              letterSpacing: 3,
-              fontWeight: 800,
-              textTransform: "uppercase"
-            }}
-          >
-            {product.brand || "Selection"}
+        <Box sx={{ mt: 2, px: 1 }}>
+          <Typography variant="caption" sx={{ color: "#D4AF37", fontWeight: 800, letterSpacing: 1.5 }}>
+            {product.category?.toUpperCase() || "FINE JEWELRY"}
           </Typography>
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              fontFamily: "'Playfair Display', serif", 
-              fontWeight: 900, 
-              mt: 1,
-              color: "#1a1a1a"
-            }}
-          >
+          <Typography variant="body2" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "1rem", mt: 0.5, lineHeight: 1.2 }}>
             {product.name}
           </Typography>
-          <Typography sx={{ fontWeight: 300, color: "#777", mt: 0.5 }}>
-            ₹{product.price?.toLocaleString()}
+          <Typography variant="body2" sx={{ color: "#888", mt: 0.5, fontWeight: 500 }}>
+            ₹{Math.floor(product.price || 0).toLocaleString()}
           </Typography>
         </Box>
       </Box>
