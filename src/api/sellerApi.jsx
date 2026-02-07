@@ -15,15 +15,12 @@ const SellerApi = axios.create({
 // ===========================
 SellerApi.interceptors.request.use(
   (config) => {
-    const publicEndpoints = [
-      "/brands",
-      "/attributes",
-      "/products/page",
-      "/products/page/",
-    ];
-
-    const isPublic = publicEndpoints.some((endpoint) =>
-      config.url.startsWith(endpoint)
+    // Public endpoints: don't attach token
+    const publicEndpoints = ["/brands", "/attributes", "/products/page"];
+    
+    // Handle all subpaths (e.g., /products/page/79/page)
+    const isPublic = publicEndpoints.some(endpoint =>
+      config.url.startsWith(endpoint) || config.url.startsWith(endpoint + "/")
     );
 
     if (!isPublic) {
@@ -42,220 +39,142 @@ SellerApi.interceptors.request.use(
 // SELLER API METHODS
 // ===========================
 const sellerApi = {
-  // =====================
+  // ---------------------------
   // BRANDS
-  // =====================
-  getAllBrands: async () => {
-    const res = await SellerApi.get("/brands");
-    return res.data;
-  },
+  // ---------------------------
+  getAllBrands: () =>
+    SellerApi.get("/brands").then((res) => res.data),
 
-  // =====================
+  // ---------------------------
   // ATTRIBUTES
-  // =====================
- getAllAttributes: async () => {
-  const res = await SellerApi.get("/attributes");
-
-  // Transform backend data safely
-  return (res.data || []).map((attr) => ({
-    id: attr.id ?? Math.random(), // fallback unique id
-    name: attr.name ?? "Unknown Attribute",
-    values: (attr.values || []).map((val, index) => ({
-      id: val.id ?? index,           // fallback id
-      name: val.value ?? val ?? "Unknown Value", // fallback name
-    })),
-  }));
-},
-
-  saveAttributes: async (productId, attributes) => {
-    if (!productId) throw new Error("productId is required");
-
-    /**
-     * attributes = [
-     *  { attributeId: 1, valueId: 3 },
-     *  { attributeId: 2, valueId: 6 }
-     * ]
-     */
-    const res = await SellerApi.post(
-      `/products/${productId}/attributes`,
-      attributes
-    );
-    return res.data;
+  // ---------------------------
+  getAllAttributes: async () => {
+    const res = await SellerApi.get("/attributes");
+    return (res.data || []).map((attr) => ({
+      id: attr.id ?? Math.random(),
+      name: attr.name ?? "Unknown Attribute",
+      values: (attr.values || []).map((val, index) => ({
+        id: val.id ?? index,
+        name: val.value ?? val ?? "Unknown Value",
+      })),
+    }));
   },
 
-  // =====================
-  // PRODUCTS
-  // =====================
-  createProduct: async (data) => {
-    const res = await SellerApi.post("/products", data);
-    return res.data;
-  },
+  saveAttributes: (productId, attributes) =>
+    SellerApi.post(`/products/${productId}/attributes`, attributes)
+      .then((res) => res.data),
 
-  getProductListing: async () => {
-    const res = await SellerApi.get("/products/page");
-    return res.data;
-  },
+  // ---------------------------
+  // PRODUCTS & LISTINGS
+  // ---------------------------
+  createProduct: (data) =>
+    SellerApi.post("/products", data).then((res) => res.data),
 
-  getProductPage: async (productId) => {
+  getProductListing: () =>
+    SellerApi.get("/products/page").then((res) => res.data),
+
+  getProductPage: (productId) => {
     if (!productId) throw new Error("productId required");
-    const res = await SellerApi.get(`/products/page/${productId}/page`);
-    return res.data;
+    return SellerApi.get(`/products/page/${productId}/page`).then(
+      (res) => res.data
+    );
   },
 
-  // =====================
+  // ---------------------------
   // PRODUCT IMAGES
-  // =====================
-  uploadProductImages: async (productId, files, variantId) => {
+  // ---------------------------
+  uploadImage: (productId, formData) => {
+    if (!productId) throw new Error("Product ID is required");
+    return SellerApi.post(`/products/${productId}/images`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((res) => res.data);
+  },
+
+  getProductImages: (productId) => {
     if (!productId) throw new Error("productId is required");
-
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-    if (variantId) formData.append("variantId", variantId);
-
-    const res = await SellerApi.post(
-      `/products/${productId}/images`,
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
+    return SellerApi.get(`/products/${productId}/images`).then(
+      (res) => res.data
     );
-
-    return res.data;
   },
 
-  getProductImages: async (productId) => {
-    if (!productId) throw new Error("productId is required");
-    const res = await SellerApi.get(`/products/${productId}/images`);
-    return res.data;
-  },
-
-  // =====================
+  // ---------------------------
   // VARIANTS
-  // =====================
-// =====================
-// VARIANTS
-// =====================
-// Create a variant for a product
-createVariant: async (productId, data) => {
-  if (!productId) throw new Error("productId is required");
+  // ---------------------------
+  createVariant: (productId, data) =>
+    SellerApi.post(`/products/${productId}/variants`, data).then(
+      (res) => res.data
+    ),
 
-  if (!data || !data.attributes || typeof data.attributes !== "object") {
-    throw new Error(
-      "Variant payload must include 'attributes' as an object { attributeId: valueId }"
-    );
-  }
-
-  // Ensure all IDs are numbers
-  const attributesObj = {};
-  Object.entries(data.attributes).forEach(([attrId, valId]) => {
-    attributesObj[Number(attrId)] = Number(valId);
-  });
-
-  const payload = {
-    ...data,
-    attributes: attributesObj,
-    stock: Number(data.stock) || 0,
-    sku: data.sku || `SKU${Math.floor(Math.random() * 10000)}`,
-  };
-
-  const res = await SellerApi.post(`/products/${productId}/variants`, payload);
-  return res.data;
-},
-
-
-
-
-  getVariants: async (productId) => {
+  getVariants: (productId) => {
     if (!productId) throw new Error("productId is required");
-    const res = await SellerApi.get(`/products/${productId}/variants`);
-    return res.data;
+    return SellerApi.get(`/products/${productId}/variants`).then(
+      (res) => res.data
+    );
   },
 
-  // =====================
+  // ---------------------------
   // VARIANT PRICING
-  // =====================
-  setVariantPrice: async (variantId, data) => {
-    if (!variantId) throw new Error("variantId is required");
-    const res = await SellerApi.post(
-      `/variants/${variantId}/pricing/price`,
-      data
-    );
-    return res.data;
+  // ---------------------------
+  setVariantPrice: (variantId, data) =>
+    SellerApi.post(`/variants/${variantId}/pricing/price`, data).then(
+      (res) => res.data
+    ),
+
+  setVariantDiscount: (variantId, data) =>
+    SellerApi
+      .post(`/variants/${variantId}/pricing/discount`, data)
+      .then((res) => res.data),
+
+  savePricing: async (productId, variants) => {
+    if (!productId) throw new Error("productId required");
+    for (const v of variants) {
+      if (!v.id) continue;
+      await SellerApi.post(`/variants/${v.id}/pricing/price`, {
+        mrp: Number(v.mrp),
+        sellingPrice: Number(v.sellingPrice),
+      });
+      await SellerApi.post(`/variants/${v.id}/pricing/discount`, {
+        discountType: v.discountType,
+        discountValue: Number(v.discountValue),
+      });
+    }
+    return true;
   },
 
-  setVariantDiscount: async (variantId, data) => {
-    if (!variantId) throw new Error("variantId is required");
-    const res = await SellerApi.post(
-      `/variants/${variantId}/pricing/discount`,
-      data
-    );
-    return res.data;
-  },
-
-  // =====================
+  // ---------------------------
   // FEATURES
-  // =====================
-saveFeatures: async (productId, features) => {
-  if (!productId) throw new Error("productId is required");
+  // ---------------------------
+  saveFeatures: (productId, payload) => {
+    const features = payload.map((f) =>
+      typeof f === "string" ? f : f.feature || f.text
+    );
+    return SellerApi.post(`/products/${productId}/features`, features).then(
+      (res) => res.data
+    );
+  },
 
-  const payload = features.map(f =>
-    typeof f === "string" ? f : f.feature
-  );
-
-  const res = await SellerApi.post(
-    `/products/${productId}/features`,
-    payload
-  );
-  return res.data;
-},
-
-
-  // =====================
+  // ---------------------------
   // SPECIFICATIONS
-  // =====================
-  saveSpecifications: async (productId, specs) => {
+  // ---------------------------
+  saveSpecifications: (productId, specs) =>
+    SellerApi.post(`/products/${productId}/specifications/bulk`, specs).then(
+      (res) => res.data
+    ),
+
+  getSpecifications: (productId) => {
     if (!productId) throw new Error("productId is required");
-    const res = await SellerApi.post(
-      `/products/${productId}/specifications/bulk`,
-      specs
-    );
-    return res.data;
+    return SellerApi.get(`/products/${productId}/specifications`)
+      .then((res) => (Array.isArray(res.data) ? res.data : []))
+      .catch(() => []);
   },
 
-  getSpecifications: async (productId) => {
-    if (!productId) throw new Error("productId is required");
-    const res = await SellerApi.get(`/products/${productId}/specifications`);
-    return res.data;
-  },
-
-  // =====================
-  // MANUFACTURER INFO
-  // =====================
-  saveManufacturerInfo: async (productId, content) => {
-    if (!productId) throw new Error("productId is required");
-    const res = await SellerApi.post(
-      `/products/${productId}/manufacturer`,
-      content
-    );
-    return res.data;
-  },
-
-
-  selectVariant: async (productId, attributes) => {
-  if (!productId) throw new Error("productId is required");
-
-  /**
-   * attributes = {
-   *   attributeId1: valueId1,
-   *   attributeId2: valueId2,
-   *   ...
-   * }
-   */
-  const payload = { attributes };
-  const res = await SellerApi.post(
-    `/products/${productId}/variants/select`,
-    payload
-  );
-  return res.data; // { variantId, price, stock }
-},
+  // ---------------------------
+  // MANUFACTURER
+  // ---------------------------
+  saveManufacturer: (productId, content) =>
+    SellerApi.post(`/products/${productId}/manufacturer`, content).then(
+      (res) => res.data
+    ),
 };
 
 export default sellerApi;

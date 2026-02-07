@@ -1,4 +1,18 @@
 import React, { useEffect, useState } from "react";
+import { 
+  Box, 
+  Typography, 
+  Chip, 
+  Button, 
+  Paper, 
+  Divider, 
+  Stack,
+  IconButton,
+  Tooltip
+} from "@mui/material";
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import StyleIcon from '@mui/icons-material/Style';
 import sellerApi from "../../api/sellerApi";
 
 const AttributeSelection = ({ state, dispatch }) => {
@@ -10,18 +24,17 @@ const AttributeSelection = ({ state, dispatch }) => {
     const fetchAttributes = async () => {
       try {
         const res = await sellerApi.getAllAttributes();
-        setAttributes(res);
+        setAttributes(res || []);
       } catch (err) {
         console.error("Failed to fetch attributes:", err);
-        alert("Failed to load attributes. Check console.");
       }
     };
     fetchAttributes();
   }, []);
 
-  // Update state.attributes whenever attributeSets change
+  // Sync merged attributes to global state
   useEffect(() => {
-    if (state.attributeSets && state.attributeSets.length > 0) {
+    if (state.attributeSets?.length > 0) {
       const mergedAttrs = {};
       state.attributeSets.forEach((set) => {
         Object.entries(set).forEach(([attrId, valIds]) => {
@@ -47,10 +60,8 @@ const AttributeSelection = ({ state, dispatch }) => {
   };
 
   const addAttributeSet = () => {
-    if (!Object.values(currentSelection).some((arr) => arr.length > 0)) {
-      alert("Select at least one attribute");
-      return;
-    }
+    const hasSelection = Object.values(currentSelection).some((arr) => arr.length > 0);
+    if (!hasSelection) return; // Silent return for testing
 
     const updatedSets = [...(state.attributeSets || []), currentSelection];
     dispatch({ attributeSets: updatedSets });
@@ -71,68 +82,97 @@ const AttributeSelection = ({ state, dispatch }) => {
   };
 
   return (
-    <div style={{ marginBottom: "20px" }}>
-      {attributes.map((attr) => (
-        <div key={attr.id} style={{ marginBottom: "10px" }}>
-          <strong>{attr.name}</strong>
-          <div style={{ display: "flex", flexWrap: "wrap", marginTop: "6px" }}>
-            {attr.values.map((val) => {
-              const selected = (currentSelection[attr.id] || []).includes(val.id);
-              return (
-                <button
-                  key={`${attr.id}-${val.id}`}
-                  type="button"
-                  onClick={() => handleSelect(attr.id, val.id)}
-                  style={{
-                    marginRight: "6px",
-                    marginBottom: "6px",
-                    padding: "6px 10px",
-                    borderRadius: "4px",
-                    border: selected ? "2px solid #ffd700" : "1px solid #ccc",
-                    backgroundColor: selected ? "#fff8e1" : "#fff",
-                    cursor: "pointer",
-                  }}
-                >
-                  {val.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+    <Box sx={{ p: { xs: 1, md: 2 } }}>
+      <Typography variant="h4" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <StyleIcon color="secondary" /> Attribute Configuration
+      </Typography>
 
-      <button onClick={addAttributeSet} style={{ marginTop: "10px" }}>
-        Add Attribute Set
-      </button>
+      {/* Attribute Selection Area */}
+      <Paper sx={{ p: 3, borderRadius: 3, bgcolor: 'background.paper', mb: 4 }}>
+        {attributes.map((attr) => (
+          <Box key={attr.id} sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, color: 'primary.main' }}>
+              {attr.name}
+            </Typography>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              {attr.values.map((val) => {
+                const isSelected = (currentSelection[attr.id] || []).includes(val.id);
+                return (
+                  <Chip
+                    key={`${attr.id}-${val.id}`}
+                    label={val.name}
+                    onClick={() => handleSelect(attr.id, val.id)}
+                    color={isSelected ? "secondary" : "default"}
+                    variant={isSelected ? "filled" : "outlined"}
+                    sx={{ 
+                      borderRadius: '8px',
+                      transition: 'all 0.2s',
+                      '&:hover': { transform: 'translateY(-2px)' }
+                    }}
+                  />
+                );
+              })}
+            </Stack>
+          </Box>
+        ))}
 
-      {state.attributeSets && state.attributeSets.length > 0 && (
-        <div style={{ marginTop: "10px" }}>
-          <strong>Selected Attribute Sets:</strong>
-          <ul>
+        <Button 
+          fullWidth 
+          variant="contained" 
+          startIcon={<AddIcon />}
+          onClick={addAttributeSet}
+          sx={{ 
+            mt: 2, 
+            py: 1.5, 
+            background: "linear-gradient(135deg, #D8B67B, #B5945B)",
+            color: 'primary.main',
+            fontWeight: 700
+          }}
+        >
+          Define Attribute Set
+        </Button>
+      </Paper>
+
+      {/* Displaying Saved Sets */}
+      {state.attributeSets?.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" gutterBottom color="text.secondary">
+            Defined Sets
+          </Typography>
+          <Stack spacing={2}>
             {state.attributeSets.map((set, idx) => (
-              <li key={idx} style={{ marginBottom: "6px" }}>
-                {Object.entries(set)
-                  .map(([attrId, valIds]) =>
-                    valIds.map((valId) => getValueName(attrId, valId)).join(", ")
-                  )
-                  .join(" | ")}
-                <button
-                  style={{
-                    marginLeft: "10px",
-                    padding: "2px 6px",
-                    border: "1px solid #ccc",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => removeAttributeSet(idx)}
-                >
-                  Remove
-                </button>
-              </li>
+              <Paper 
+                key={idx} 
+                elevation={0}
+                sx={{ 
+                  p: 2, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 2,
+                  bgcolor: '#fafafa'
+                }}
+              >
+                <Box>
+                  {Object.entries(set).map(([attrId, valIds], sIdx) => (
+                    <Typography key={attrId} variant="body2" component="span" sx={{ fontWeight: 600 }}>
+                      {valIds.map((vId) => getValueName(attrId, vId)).join(", ")}
+                      {sIdx < Object.entries(set).length - 1 ? " | " : ""}
+                    </Typography>
+                  ))}
+                </Box>
+                <Tooltip title="Remove Set">
+                  <IconButton onClick={() => removeAttributeSet(idx)} color="error" size="small">
+                    <DeleteOutlineIcon />
+                  </IconButton>
+                </Tooltip>
+              </Paper>
             ))}
-          </ul>
-        </div>
+          </Stack>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

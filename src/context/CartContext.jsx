@@ -11,18 +11,17 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Helper to build the correct path for your localhost backend
+  // Resolve backend image paths
   const resolveImagePath = (path) => {
     if (!path || path === "/placeholder.png" || path === "placeholder.png") return null;
     if (path.startsWith("http")) return path;
-    
-    // Most Spring Boot apps serve images from a specific endpoint or static folder
-    // Change this to match your actual backend URL (e.g., http://localhost:8080/uploads/)
-    const BASE_URL = "http://localhost:8080"; 
+
+    const BASE_URL = "http://localhost:8080";
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
     return `${BASE_URL}${cleanPath}`;
   };
 
+  // 🔄 FETCH CART (single source of truth)
   const fetchCart = async () => {
     if (!user) {
       setCart([]);
@@ -36,22 +35,19 @@ export const CartProvider = ({ children }) => {
 
       const enrichedCart = await Promise.all(
         data.map(async (item) => {
-          // Check if the current image is just the placeholder string from your log
-          let currentImage = resolveImagePath(item.image);
-          
-          // If it's null (meaning it was a placeholder or empty), fetch from Seller API
-          if (!currentImage && item.productId) {
+          let image = resolveImagePath(item.image);
+
+          // fallback to seller images
+          if (!image && item.productId) {
             try {
-              const imageResponse = await sellerApi.getProductImages(item.productId);
-              
-              if (imageResponse && imageResponse.length > 0) {
-                // Try to find the path in common property names
-                const imgObj = imageResponse[0];
-                const path = imgObj.imageUrl || imgObj.imagePath || (typeof imgObj === 'string' ? imgObj : null);
-                currentImage = resolveImagePath(path);
+              const images = await sellerApi.getProductImages(item.productId);
+              if (images?.length > 0) {
+                const img = images[0];
+                const path = img.imageUrl || img.imagePath || img;
+                image = resolveImagePath(path);
               }
-            } catch (err) {
-              console.warn(`[Cart] No real images found for product ${item.productId}`);
+            } catch {
+              console.warn(`[Cart] Image missing for product ${item.productId}`);
             }
           }
 
@@ -61,7 +57,7 @@ export const CartProvider = ({ children }) => {
             variantId: item.variantId,
             variantName: item.variantName || null,
             productName: item.productName || "Unnamed Product",
-            image: currentImage || "/placeholder.png", // Final fallback if all else fails
+            image: image || "/placeholder.png",
             price: item.price ?? 0,
             quantity: item.quantity ?? 1,
           };
@@ -70,54 +66,50 @@ export const CartProvider = ({ children }) => {
 
       setCart(enrichedCart);
     } catch (err) {
-      console.error("[Cart] Failed to fetch cart:", err);
+      console.error("[Cart] Fetch failed:", err);
       setCart([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial + user change
   useEffect(() => {
     fetchCart();
   }, [user]);
 
+  // ➕ Add item
   const addToCart = async ({ productId, variantId, quantity = 1 }) => {
-    try {
-      await cartApi.addToCart({ productId, variantId, quantity });
-      await fetchCart();
-    } catch (err) {
-      console.error("[Cart] Add failed:", err);
-    }
+    await cartApi.addToCart({ productId, variantId, quantity });
+    await fetchCart();
   };
 
+  // ❌ Remove item
   const removeItem = async (cartItemId) => {
-    try {
-      await cartApi.removeItem(cartItemId);
-      await fetchCart();
-    } catch (err) {
-      console.error("[Cart] Remove failed:", err);
-    }
+    await cartApi.removeItem(cartItemId);
+    await fetchCart();
   };
 
+  // 🔁 Update quantity
   const updateQuantity = async (item, newQty) => {
     if (newQty <= 0) {
       await removeItem(item.cartItemId);
       return;
     }
+
     const diff = newQty - item.quantity;
-    try {
-      // Re-using addToCart logic as per your original code
-      await cartApi.addToCart({
-        productId: item.productId,
-        variantId: item.variantId,
-        quantity: diff,
-      });
-      await fetchCart();
-    } catch (err) {
-      console.error("[Cart] Update failed:", err);
-    }
+    if (diff === 0) return;
+
+    await cartApi.addToCart({
+      productId: item.productId,
+      variantId: item.variantId,
+      quantity: diff,
+    });
+
+    await fetchCart();
   };
 
+  // 💰 Total
   const totalPrice = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cart]
@@ -125,7 +117,15 @@ export const CartProvider = ({ children }) => {
 
   return (
     <CartContext.Provider
-      value={{ cart, loading, totalPrice, addToCart, removeItem, updateQuantity, fetchCart }}
+      value={{
+        cart,
+        loading,
+        totalPrice,
+        addToCart,
+        removeItem,
+        updateQuantity,
+        fetchCart, // 🔥 USED AFTER PAYMENT
+      }}
     >
       {children}
     </CartContext.Provider>

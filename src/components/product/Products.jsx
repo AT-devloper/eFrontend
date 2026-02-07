@@ -7,7 +7,7 @@ import { useCart } from "../../context/CartContext.jsx";
 import SellerLayout from "../../layouts/SellerLayout.jsx";
 import { 
   Box, Typography, Grid, Container, Skeleton, IconButton, 
-  InputBase, Paper, Stack, Menu, MenuItem, Button 
+  InputBase, Paper, Stack, Menu, MenuItem, Button, Rating 
 } from "@mui/material";
 
 const Products = () => {
@@ -19,12 +19,13 @@ const Products = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [sortBy, setSortBy] = useState("Featured");
 
+  const [productRatings, setProductRatings] = useState({}); 
   const { cart, addToCart } = useCart();
   const navigate = useNavigate();
 
-  // Dynamically extract categories from data to ensure background logic never fails
   const categories = ["All", "Rings", "Necklaces", "Earrings", "Bracelets", "Engagement"];
 
+  // Fetch products and images
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -39,6 +40,9 @@ const Products = () => {
         const mappedData = data.map((p, i) => ({ ...p, image: imagesData[i] }));
         setProducts(mappedData);
         setFilteredProducts(mappedData);
+
+        // Fetch ratings for all products
+        mappedData.forEach((p) => fetchProductRatings(p.productId));
       } finally {
         setLoading(false);
       }
@@ -46,11 +50,33 @@ const Products = () => {
     fetchProducts();
   }, []);
 
+  // Fetch product ratings from Review API
+  const fetchProductRatings = async (productId) => {
+    try {
+      const res = await fetch(`http://localhost:8080/auth/reviews/product/${productId}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const totalRating = data.reduce((acc, r) => acc + r.rating, 0);
+        const avgRating = totalRating / data.length;
+        setProductRatings((prev) => ({
+          ...prev,
+          [productId]: { avg: avgRating, count: data.length },
+        }));
+      } else {
+        setProductRatings((prev) => ({ ...prev, [productId]: { avg: 0, count: 0 } }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch product ratings", err);
+      setProductRatings((prev) => ({ ...prev, [productId]: { avg: 0, count: 0 } }));
+    }
+  };
+
+  // Filter & Sort Logic
   useEffect(() => {
     let result = [...products];
     if (selectedCategory !== "All") result = result.filter((p) => p.category === selectedCategory);
     if (searchQuery) result = result.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+
     if (sortBy === "Price: Low to High") result.sort((a, b) => a.price - b.price);
     if (sortBy === "Price: High to Low") result.sort((a, b) => b.price - a.price);
 
@@ -59,10 +85,8 @@ const Products = () => {
 
   return (
     <SellerLayout>
-      {/* Background set to pure white to blend with product image backgrounds */}
       <Box sx={{ bgcolor: "#ffffff", minHeight: "100vh" }}>
-        
-        {/* REFINED STICKY NAV */}
+        {/* Sticky Header with Search and Sort */}
         <Box sx={{ 
           position: "sticky", top: 0, zIndex: 1100, 
           bgcolor: "rgba(255,255,255,0.9)", backdropFilter: "blur(15px)",
@@ -113,6 +137,7 @@ const Products = () => {
           </Container>
         </Box>
 
+        {/* Product Grid */}
         <Container maxWidth="lg" sx={{ py: 8 }}>
           <Grid container spacing={5}>
             {loading ? (
@@ -128,11 +153,13 @@ const Products = () => {
                 navigate={navigate} 
                 addToCart={addToCart}
                 inCart={cart.some(ci => ci.productId === p.productId)}
+                rating={productRatings[p.productId]} 
               />
             ))}
           </Grid>
         </Container>
 
+        {/* Sort Menu */}
         <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
           <MenuItem onClick={() => { setSortBy("Featured"); setAnchorEl(null); }}>Featured</MenuItem>
           <MenuItem onClick={() => { setSortBy("Price: Low to High"); setAnchorEl(null); }}>Price: Low to High</MenuItem>
@@ -143,7 +170,8 @@ const Products = () => {
   );
 };
 
-const JewelryCard = ({ product, navigate, addToCart, inCart }) => {
+/* --- JewelryCard Component --- */
+const JewelryCard = ({ product, navigate, addToCart, inCart, rating }) => {
   const [hover, setHover] = useState(false);
 
   return (
@@ -154,11 +182,10 @@ const JewelryCard = ({ product, navigate, addToCart, inCart }) => {
         onClick={() => navigate(`/products/${product.productId}`)}
         sx={{ textAlign: "center", cursor: "pointer" }}
       >
-        {/* Transparent Background Logic */}
         <Box sx={{ 
           position: "relative", 
           overflow: "hidden", 
-          bgcolor: "#ffffff", // Pure white to match typical product photography
+          bgcolor: "#ffffff", 
           aspectRatio: "1/1.2", 
           display: "flex", 
           alignItems: "center", 
@@ -174,7 +201,6 @@ const JewelryCard = ({ product, navigate, addToCart, inCart }) => {
                 maxWidth: "90%", 
                 maxHeight: "90%", 
                 objectFit: "contain",
-                // This mixBlendMode helps remove slightly off-white backgrounds from images
                 mixBlendMode: "multiply" 
             }}
           />
@@ -204,12 +230,56 @@ const JewelryCard = ({ product, navigate, addToCart, inCart }) => {
 
         <Box sx={{ mt: 2, px: 1 }}>
           <Typography variant="caption" sx={{ color: "#D4AF37", fontWeight: 800, letterSpacing: 1.5 }}>
-            {product.category?.toUpperCase() || "FINE JEWELRY"}
+            {product.category?.toUpperCase() || "AT-LUXE JEWELRY"}
           </Typography>
           <Typography variant="body2" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: "1rem", mt: 0.5, lineHeight: 1.2 }}>
             {product.name}
           </Typography>
-          <Typography variant="body2" sx={{ color: "#888", mt: 0.5, fontWeight: 500 }}>
+
+          {/* Rating Section - Fixed height to prevent layout shift */}
+<Box sx={{ 
+  display: "flex", 
+  alignItems: "center", 
+  justifyContent: "center", 
+  mt: 0.8, 
+  mb: 0.2,
+  height: "20px" // Prevents mixing/collapsing
+}}>
+  {rating && rating.count > 0 ? (
+    <>
+      <Rating 
+        value={rating.avg} 
+        precision={0.5} 
+        readOnly 
+        size="small" 
+        sx={{ color: "#D4AF37", fontSize: "0.85rem" }} 
+      />
+      <Typography variant="caption" sx={{ color: "#888", ml: 0.5, fontSize: "0.7rem" }}>
+        ({rating.count})
+      </Typography>
+    </>
+  ) : (
+    /* New Arrival Badge - Using a subtle background to separate it from product text */
+    <Typography 
+      variant="caption" 
+      sx={{ 
+        color: "#1a1a1a", // Darker text for visibility
+        fontSize: "0.6rem", 
+        letterSpacing: 1.5,
+        fontWeight: 700,
+        bgcolor: "#f0f0f0", // Subtle grey background
+        px: 1,
+        py: 0.2,
+        borderRadius: "2px",
+        textTransform: "uppercase"
+      }}
+    >
+      New Arrival
+    </Typography>
+  )}
+</Box>
+
+          <Typography variant="body2" sx={{ color: "#000", mt: 0.2, fontWeight: 700 }}>
             ₹{Math.floor(product.price || 0).toLocaleString()}
           </Typography>
         </Box>

@@ -15,7 +15,11 @@ import {
   Stepper,
   Step,
   StepLabel,
+  Rating,
+  IconButton,
 } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import sellerApi from "../api/sellerApi";
 
 // 🔥 Import Navbar and Footer
@@ -28,12 +32,15 @@ const OrderDetail = () => {
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [reviews, setReviews] = useState({});
-  const [productReviews, setProductReviews] = useState({});
+  const [reviews, setReviews] = useState({}); // comment input
+  const [ratings, setRatings] = useState({}); // rating input
+  const [productReviews, setProductReviews] = useState({}); // fetched reviews
+  const [editingReviewId, setEditingReviewId] = useState(null); // tracks ID being edited
+
+  const BASE_URL = "http://localhost:8080/auth/reviews";
 
   // Base steps
   const baseSteps = ["ORDERED", "CONFIRMED", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"];
-  // Return steps
   const returnSteps = ["RETURN_INITIATED", "RETURNED"];
   const statusLabels = {
     ORDERED: "Ordered",
@@ -80,8 +87,8 @@ const OrderDetail = () => {
 
       setOrderData({ ...data, items: itemsWithImages });
       setLoading(false);
-
-      data.items.forEach((item) => fetchProductReviews(item.productId));
+      // Fetch reviews for each product after order details are loaded
+      itemsWithImages.forEach((item) => fetchProductReviews(item.productId));
     } catch (err) {
       console.error("Error fetching order detail:", err);
       setLoading(false);
@@ -90,7 +97,7 @@ const OrderDetail = () => {
 
   const fetchProductReviews = async (productId) => {
     try {
-      const res = await fetch(`http://localhost:8080/auth/reviews/product/${productId}`);
+      const res = await fetch(`${BASE_URL}/product/${productId}`);
       const data = await res.json();
       setProductReviews((prev) => ({ ...prev, [productId]: data }));
     } catch (err) {
@@ -106,22 +113,61 @@ const OrderDetail = () => {
     items.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   const handleSubmitReview = async (productId) => {
-    const review = reviews[productId];
-    if (!review || review.trim() === "") return alert("Please enter a review");
+    const comment = reviews[productId];
+    const rating = ratings[productId];
+
+    if (!comment || comment.trim() === "") return alert("Please enter a review");
+    if (!rating || rating === 0) return alert("Please select a rating");
+
+    // 🔥 Switch between POST (new) and PUT (update)
+    const method = editingReviewId ? "PUT" : "POST";
+    const url = editingReviewId ? `${BASE_URL}/${editingReviewId}` : BASE_URL;
 
     try {
-      await fetch(`http://localhost:8080/auth/reviews`, {
-        method: "POST",
+      const response = await fetch(url, {
+        method: method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, review, rating: 5 }),
+        body: JSON.stringify({
+          userId: orderData.order.userId,
+          orderId: orderData.order.id,
+          productId,
+          rating,
+          comment,
+        }),
       });
-      alert("Review submitted successfully!");
-      setReviews((prev) => ({ ...prev, [productId]: "" }));
-      fetchProductReviews(productId);
+
+      if (response.ok) {
+        // Reset states
+        setReviews((prev) => ({ ...prev, [productId]: "" }));
+        setRatings((prev) => ({ ...prev, [productId]: 0 }));
+        setEditingReviewId(null);
+
+        fetchProductReviews(productId);
+        alert(editingReviewId ? "Review updated!" : "Review submitted!");
+      } else {
+        alert("Failed to save review");
+      }
     } catch (err) {
-      console.error("Failed to submit review", err);
-      alert("Failed to submit review");
+      console.error("Failed to process review", err);
     }
+  };
+
+  const handleDeleteReview = async (reviewId, productId) => {
+    if (!window.confirm("Delete this review?")) return;
+    try {
+      const res = await fetch(`${BASE_URL}/${reviewId}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchProductReviews(productId);
+      }
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
+  };
+
+  const handleEditClick = (review, productId) => {
+    setEditingReviewId(review.id);
+    setRatings((prev) => ({ ...prev, [productId]: review.rating }));
+    setReviews((prev) => ({ ...prev, [productId]: review.comment }));
   };
 
   if (loading) return <Typography textAlign="center">Loading order details...</Typography>;
@@ -131,33 +177,19 @@ const OrderDetail = () => {
   const isDelivered = orderStatus === "DELIVERED";
   const canCancel = ["CONFIRMED", "PACKED"].includes(orderStatus);
 
-  // Construct dynamic steps
   let steps = [...baseSteps];
-  if (orderData.order.returnStatus) {
-    steps = [...steps, ...returnSteps];
-  }
-
+  if (orderData.order.returnStatus) steps = [...steps, ...returnSteps];
   let currentStep = steps.findIndex((step) => step === orderStatus);
-
-  const handleCancelOrder = () => {
-    if (!canCancel) return alert("Cannot cancel at this stage!");
-    alert("Order cancelled at " + orderData.order.orderStatus);
-  };
-
-  const handleReturnOrder = () => {
-    alert("Return process initiated!");
-  };
 
   return (
     <>
-      {/* 🔥 Add Navbar */}
       <Navbar />
-
       <Container maxWidth="sm" sx={{ py: 5 }}>
         <Button variant="outlined" onClick={() => navigate(-1)} sx={{ mb: 3 }}>
           ← Back
         </Button>
 
+        {/* Order Info Card */}
         <Card sx={{ borderRadius: 3, backgroundColor: "background.paper", mb: 3 }}>
           <CardContent>
             <Grid container justifyContent="space-between" alignItems="center" mb={1}>
@@ -172,126 +204,104 @@ const OrderDetail = () => {
                     fontWeight: 600,
                     color: getStatusStyle(orderData.order.orderStatus).border,
                     borderColor: getStatusStyle(orderData.order.orderStatus).border,
-                    backgroundColor: "transparent",
                   }}
                 />
               </Grid>
             </Grid>
-
             <Typography variant="body1" sx={{ mb: 2 }}>
               Payment ID: {orderData.order.paymentId || "Not Paid"}
             </Typography>
 
             <Stepper activeStep={currentStep} alternativeLabel sx={{ mb: 3 }}>
-              {steps.map((status, index) => {
-                const stepColor = index <= currentStep ? getStatusStyle(status).border : "#E0E0E0";
-                return (
-                  <Step key={status}>
-                    <StepLabel sx={{ color: stepColor }}>{statusLabels[status]}</StepLabel>
-                  </Step>
-                );
-              })}
+              {steps.map((status, index) => (
+                <Step key={status}>
+                  <StepLabel sx={{ color: index <= currentStep ? getStatusStyle(status).border : "#E0E0E0" }}>
+                    {statusLabels[status]}
+                  </StepLabel>
+                </Step>
+              ))}
             </Stepper>
-
             {canCancel && orderStatus !== "CANCELLED" && (
-              <Button variant="contained" color="error" onClick={handleCancelOrder} sx={{ mb: 2 }}>
+              <Button variant="contained" color="error" onClick={() => alert("Cancelled")} sx={{ mb: 2 }}>
                 Cancel Order
-              </Button>
-            )}
-
-            {isDelivered && !orderData.order.returnStatus && (
-              <Button variant="contained" color="warning" onClick={handleReturnOrder} sx={{ mb: 2 }}>
-                Return Order
               </Button>
             )}
           </CardContent>
         </Card>
 
+        {/* Products Card */}
         <Card sx={{ borderRadius: 3, backgroundColor: "background.paper" }}>
           <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-              Products
-            </Typography>
-
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>Products</Typography>
             <List dense>
               {orderData.items.map((item) => (
-                <ListItem
-                  key={item.id}
-                  sx={{
-                    display: "flex",
-                    flexDirection: { xs: "column", sm: "row" },
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    color: "text.secondary",
-                    py: 1,
-                  }}
-                >
+                <ListItem key={item.id} sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, py: 2, alignItems: 'flex-start' }}>
                   <img
                     src={item.image}
                     alt={item.name}
                     style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, marginRight: 16 }}
-                    onError={(e) => (e.target.src = "/placeholder.png")}
                   />
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ flex: 1 }}>
                     <Typography variant="body1" fontWeight={600}>{item.name}</Typography>
-                    <Typography variant="body2">Product ID: {item.productId}</Typography>
-                    {item.variants && (
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        {Object.entries(item.variants).map(([key, value]) => (
-                          <Chip key={key} label={`${key}: ${value}`} size="small" />
+                    
+                    {isDelivered && (
+                      <div style={{ marginTop: 8 }}>
+                        <Rating
+                          value={ratings[item.productId] || 0}
+                          onChange={(e, v) => setRatings((prev) => ({ ...prev, [item.productId]: v }))}
+                        />
+                        <TextField
+                          label={editingReviewId ? "Edit your review" : "Write a review"}
+                          variant="outlined" size="small" fullWidth multiline rows={2}
+                          value={reviews[item.productId] || ""}
+                          onChange={(e) => setReviews((prev) => ({ ...prev, [item.productId]: e.target.value }))}
+                          sx={{ mb: 1, mt: 1 }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <Button variant="contained" size="small" onClick={() => handleSubmitReview(item.productId)}>
+                            {editingReviewId ? "Update Review" : "Submit Review"}
+                          </Button>
+                          {editingReviewId && (
+                            <Button size="small" color="inherit" onClick={() => {setEditingReviewId(null); setReviews({}); setRatings({});}}>
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Display Reviews for this Product */}
+                        {productReviews[item.productId]?.map((r) => (
+                          <div key={r.id} style={{ marginTop: 10, padding: 8, background: '#f9f9f9', borderRadius: 4 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Rating value={r.rating} readOnly size="small" />
+                              <div>
+                                <IconButton size="small" color="primary" onClick={() => handleEditClick(r, item.productId)}>
+                                  <EditIcon fontSize="inherit" />
+                                </IconButton>
+                                <IconButton size="small" color="error" onClick={() => handleDeleteReview(r.id, item.productId)}>
+                                  <DeleteIcon fontSize="inherit" />
+                                </IconButton>
+                              </div>
+                            </div>
+                            <Typography variant="body2" color="textPrimary">"{r.comment}"</Typography>
+                          </div>
                         ))}
                       </div>
                     )}
-                    {isDelivered && (
-                      <div style={{ marginTop: 8 }}>
-                        <TextField
-                          label="Write a review"
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                          multiline
-                          rows={2}
-                          value={reviews[item.productId] || ""}
-                          onChange={(e) => setReviews((prev) => ({ ...prev, [item.productId]: e.target.value }))}
-                          sx={{ mb: 1 }}
-                        />
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={() => handleSubmitReview(item.productId)}
-                        >
-                          Submit Review
-                        </Button>
-
-                        {productReviews[item.productId]?.length > 0 && (
-                          <div style={{ marginTop: 8 }}>
-                            <Typography variant="subtitle2">Reviews:</Typography>
-                            {productReviews[item.productId].map((r) => (
-                              <Typography key={r.id} variant="body2">"{r.review}"</Typography>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
-
-                  <div style={{ textAlign: "right", marginTop: 8 }}>
-                    <Typography>Qty: {item.quantity}</Typography>
-                    <Typography>₹{item.price}</Typography>
+                  <div style={{ textAlign: "right", minWidth: '80px' }}>
+                    <Typography variant="body2" color="text.secondary">Qty: {item.quantity}</Typography>
+                    <Typography variant="body1" fontWeight={600}>₹{item.price}</Typography>
                   </div>
                 </ListItem>
               ))}
             </List>
-
             <Divider sx={{ my: 1 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, textAlign: "right" }}>
+            <Typography variant="h6" sx={{ textAlign: "right", fontWeight: 700 }}>
               Total: ₹{calculateTotal(orderData.items)}
             </Typography>
           </CardContent>
         </Card>
       </Container>
-
-      {/* 🔥 Add Footer */}
       <Footer />
     </>
   );

@@ -35,9 +35,12 @@ export default function Navbar() {
 
   const [openAuth, setOpenAuth] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
-  const [direction, setDirection] = useState(0); // 1 for right, -1 for left
+  const [direction, setDirection] = useState(0); 
   const [isScrolled, setIsScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Fake Wishlist count - replace with actual context logic later
+  const wishlistCount = 0;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -140,6 +143,21 @@ export default function Navbar() {
                 <IconButton component={motion.button} whileHover={{ rotate: 15 }} sx={{ color: isScrolled ? "secondary.main" : "primary.main" }}>
                   <SearchIcon />
                 </IconButton>
+
+                {/* --- WISHLIST ICON (Desktop Only) --- */}
+                {!isMobile && (
+                  <IconButton 
+                    onClick={() => navigate("/wishlist")}
+                    component={motion.button} 
+                    whileHover={{ scale: 1.1 }} 
+                    sx={{ color: isScrolled ? "secondary.main" : "primary.main" }}
+                  >
+                    <Badge badgeContent={wishlistCount} color="secondary" showZero={false}>
+                      <FavoriteIcon />
+                    </Badge>
+                  </IconButton>
+                )}
+
                 {!user ? (
                   <Button
                     onClick={handleOpenAuth}
@@ -191,7 +209,6 @@ export default function Navbar() {
 
           {(activeTab === "login" || activeTab === "register") && (
             <Box sx={{ display: "flex", position: 'relative', bgcolor: "rgba(0,0,0,0.05)", borderRadius: 50, p: 0.5, mb: 3 }}>
-               {/* Animated Slider Background */}
                <Box
                 component={motion.div}
                 layoutId="bubble"

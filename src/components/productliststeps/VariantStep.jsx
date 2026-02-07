@@ -1,29 +1,24 @@
 import React, { useState, useEffect } from "react";
+import { Box, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import InventoryIcon from '@mui/icons-material/Inventory';
 import sellerApi from "../../api/sellerApi";
 
-// Generate SKU
+// SKU + Combinations
 const generateSKU = (attributes, allAttributes) => {
   const parts = [];
   Object.entries(attributes).forEach(([attrId, valId]) => {
     const attr = allAttributes.find((a) => a.id === parseInt(attrId));
-    if (!attr) return;
-    const val = attr.values.find((v) => v.id === valId);
-    if (!val) return;
-
-    if (attr.name.toLowerCase() === "metal") parts.push(val.name.slice(0, 3).toUpperCase());
-    else if (attr.name.toLowerCase() === "purity") parts.push(val.name.replace("Kt", ""));
-    else if (attr.name.toLowerCase() === "size") parts.push(val.name);
-    else parts.push(val.name.slice(0, 3).toUpperCase());
+    const val = attr?.values.find((v) => v.id === valId);
+    if (val) parts.push(val.name.slice(0, 3).toUpperCase());
   });
-  return parts.join("-") || `SKU${Math.floor(Math.random() * 1000)}`;
+  return parts.join("-") || `SKU-${Math.random().toString(36).substr(2, 5)}`;
 };
 
-// Cartesian product of attribute values
 const generateCombinations = (attrSet) => {
   const entries = Object.entries(attrSet);
   if (!entries.length) return [];
   let combos = entries[0][1].map((val) => ({ [entries[0][0]]: val }));
-
   for (let i = 1; i < entries.length; i++) {
     const [attrId, valIds] = entries[i];
     const newCombos = [];
@@ -36,104 +31,107 @@ const generateCombinations = (attrSet) => {
 };
 
 const VariantStep = ({ state, dispatch }) => {
-  const [stock, setStock] = useState("");
   const [allAttributes, setAllAttributes] = useState([]);
-  const [previewSKUs, setPreviewSKUs] = useState([]);
+  const [groupedVariants, setGroupedVariants] = useState([]);
 
   useEffect(() => {
-    const fetchAttributes = async () => {
-      try {
-        const attrs = await sellerApi.getAllAttributes();
-        setAllAttributes(attrs);
-      } catch (err) {
-        console.error(err);
-      }
+    const fetchAttrs = async () => {
+      const res = await sellerApi.getAllAttributes();
+      setAllAttributes(res);
     };
-    fetchAttributes();
+    fetchAttrs();
   }, []);
 
-  // Generate SKU previews
   useEffect(() => {
-    if (!state.attributeSets || !state.attributeSets.length) {
-      setPreviewSKUs([]);
-      return;
-    }
-
-    const previews = [];
-    state.attributeSets.forEach((set) => {
+    if (!state.attributeSets?.length) return;
+    const groups = state.attributeSets.map((set, setIdx) => {
       const combos = generateCombinations(set);
-      combos.forEach((combo) => {
-        previews.push({ combo, sku: generateSKU(combo, allAttributes) });
-      });
+      return combos.map((combo) => ({
+        combo,
+        sku: generateSKU(combo, allAttributes),
+        stock: 0,
+        setIndex: setIdx
+      }));
     });
-    setPreviewSKUs(previews);
+    setGroupedVariants(groups);
   }, [state.attributeSets, allAttributes]);
 
-  const addVariants = async () => {
-    if (!state.productId) return alert("Complete Product Info first");
-    if (!previewSKUs.length) return alert("Select at least one attribute set");
+  const handleStockChange = (setIdx, varIdx, value) => {
+    const updatedGroups = [...groupedVariants];
+    updatedGroups[setIdx][varIdx].stock = value;
+    setGroupedVariants(updatedGroups);
+  };
 
+  const addVariants = async () => {
     try {
-      const savedVariants = [];
-      for (const item of previewSKUs) {
-        const payload = { sku: item.sku, stock: Number(stock) || 0, attributes: item.combo };
-        const savedVariant = await sellerApi.createVariant(state.productId, payload);
-        savedVariants.push(savedVariant);
+      const allToSave = groupedVariants.flat();
+      const savedResults = [];
+      
+      for (const item of allToSave) {
+        const payload = { sku: item.sku, stock: Number(item.stock) || 0, attributes: item.combo };
+        if (state.productId) {
+          const res = await sellerApi.createVariant(state.productId, payload);
+          savedResults.push(res);
+        } else {
+          savedResults.push({ ...payload, id: Date.now() + Math.random() });
+        }
       }
 
-      dispatch({ variants: [...state.variants, ...savedVariants] });
-      setStock("");
-      alert("Variants added successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save variants. Check console.");
-    }
+      // ✅ Save variants and set flag to allow "Next"
+      dispatch({
+        variants: [...(state.variants || []), ...savedResults],
+        variantsSaved: true,
+      });
+
+      alert("All grouped variants saved!");
+    } catch (err) { console.error(err); }
   };
 
   return (
-    <div>
-      <h5>Manage Variants</h5>
+    <Box sx={{ p: 1 }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 700, color: "primary.main", display: 'flex', alignItems: 'center' }}>
+        <InventoryIcon sx={{ mr: 1 }} /> Stock Management
+      </Typography>
 
-      <div style={{ marginBottom: "10px" }}>
-        <label>Stock (applied to all variants)</label>
-        <input
-          type="number"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          min="0"
-        />
-      </div>
+      {groupedVariants.map((group, setIdx) => (
+        <Accordion key={setIdx} defaultExpanded sx={{ mb: 2 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography fontWeight={600}>Attribute Set #{setIdx + 1}</Typography>
+            <Chip label={`${group.length} Variants`} size="small" sx={{ ml: 2 }} />
+          </AccordionSummary>
+          <AccordionDetails>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>SKU</TableCell>
+                    <TableCell align="right">Stock</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {group.map((item, varIdx) => (
+                    <TableRow key={varIdx}>
+                      <TableCell><Chip label={item.sku} variant="outlined" size="small" /></TableCell>
+                      <TableCell align="right">
+                        <TextField 
+                          type="number" size="small" value={item.stock} 
+                          onChange={(e) => handleStockChange(setIdx, varIdx, e.target.value)}
+                          sx={{ width: 80 }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </AccordionDetails>
+        </Accordion>
+      ))}
 
-      <button onClick={addVariants}>Add Variants</button>
-
-      <div style={{ marginTop: "15px" }}>
-        <h6>SKU Preview:</h6>
-        {previewSKUs.length === 0 ? (
-          <p>No variants yet.</p>
-        ) : (
-          <ul>
-            {previewSKUs.map((item, idx) => (
-              <li key={idx}>{item.sku}</li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div style={{ marginTop: "15px" }}>
-        <h6>Existing Variants:</h6>
-        {state.variants.length === 0 ? (
-          <p>No variants added yet.</p>
-        ) : (
-          <ul>
-            {state.variants.map((v) => (
-              <li key={v.id || v.sku}>
-                {v.sku} — Stock: {v.stock}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+      <Button variant="contained" fullWidth onClick={addVariants} sx={{ mt: 3, py: 1.5 }}>
+        Save All Inventory
+      </Button>
+    </Box>
   );
 };
 
