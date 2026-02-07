@@ -267,7 +267,6 @@ const CreateProductPage = () => {
   break;
 }
 
-
         default:
           break;
       }
