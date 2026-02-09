@@ -17,17 +17,16 @@ SellerApi.interceptors.request.use(
   (config) => {
     // Public endpoints: don't attach token
     const publicEndpoints = ["/brands", "/attributes", "/products/page"];
-    
-    // Handle all subpaths (e.g., /products/page/79/page)
-    const isPublic = publicEndpoints.some(endpoint =>
-      config.url.startsWith(endpoint) || config.url.startsWith(endpoint + "/")
+
+    // Handle subpaths
+    const isPublic = publicEndpoints.some(
+      (endpoint) =>
+        config.url.startsWith(endpoint) || config.url.startsWith(endpoint + "/")
     );
 
     if (!isPublic) {
       const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) config.headers.Authorization = `Bearer ${token}`;
     }
 
     return config;
@@ -42,8 +41,7 @@ const sellerApi = {
   // ---------------------------
   // BRANDS
   // ---------------------------
-  getAllBrands: () =>
-    SellerApi.get("/brands").then((res) => res.data),
+  getAllBrands: () => SellerApi.get("/brands").then((res) => res.data),
 
   // ---------------------------
   // ATTRIBUTES
@@ -61,11 +59,12 @@ const sellerApi = {
   },
 
   saveAttributes: (productId, attributes) =>
-    SellerApi.post(`/products/${productId}/attributes`, attributes)
-      .then((res) => res.data),
+    SellerApi.post(`/products/${productId}/attributes`, attributes).then(
+      (res) => res.data
+    ),
 
   // ---------------------------
-  // PRODUCTS & LISTINGS
+  // PRODUCTS
   // ---------------------------
   createProduct: (data) =>
     SellerApi.post("/products", data).then((res) => res.data),
@@ -92,24 +91,18 @@ const sellerApi = {
 
   getProductImages: (productId) => {
     if (!productId) throw new Error("productId is required");
-    return SellerApi.get(`/products/${productId}/images`).then(
-      (res) => res.data
-    );
+    return SellerApi.get(`/products/${productId}/images`).then((res) => res.data);
   },
 
   // ---------------------------
   // VARIANTS
   // ---------------------------
   createVariant: (productId, data) =>
-    SellerApi.post(`/products/${productId}/variants`, data).then(
-      (res) => res.data
-    ),
+    SellerApi.post(`/products/${productId}/variants`, data).then((res) => res.data),
 
   getVariants: (productId) => {
     if (!productId) throw new Error("productId is required");
-    return SellerApi.get(`/products/${productId}/variants`).then(
-      (res) => res.data
-    );
+    return SellerApi.get(`/products/${productId}/variants`).then((res) => res.data);
   },
 
   // ---------------------------
@@ -121,25 +114,9 @@ const sellerApi = {
     ),
 
   setVariantDiscount: (variantId, data) =>
-    SellerApi
-      .post(`/variants/${variantId}/pricing/discount`, data)
-      .then((res) => res.data),
-
-  savePricing: async (productId, variants) => {
-    if (!productId) throw new Error("productId required");
-    for (const v of variants) {
-      if (!v.id) continue;
-      await SellerApi.post(`/variants/${v.id}/pricing/price`, {
-        mrp: Number(v.mrp),
-        sellingPrice: Number(v.sellingPrice),
-      });
-      await SellerApi.post(`/variants/${v.id}/pricing/discount`, {
-        discountType: v.discountType,
-        discountValue: Number(v.discountValue),
-      });
-    }
-    return true;
-  },
+    SellerApi.post(`/variants/${variantId}/pricing/discount`, data).then(
+      (res) => res.data
+    ),
 
   // ---------------------------
   // FEATURES

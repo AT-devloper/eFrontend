@@ -3,18 +3,20 @@ import { useParams } from "react-router-dom";
 import sellerApi from "../../api/sellerApi.jsx";
 import SellerLayout from "../../layouts/SellerLayout.jsx";
 import { useCart } from "../../context/CartContext.jsx";
+import { useWishlist } from "../../context/WishlistContext.jsx"; // 1. Import Wishlist Hook
 import {
   Button, Typography, Box, CircularProgress, Divider, Grid, Stack,
   Container, Chip, Breadcrumbs, Link, IconButton, Rating, LinearProgress,
   Paper, Tooltip
 } from "@mui/material";
 import {
-  FavoriteBorder, LocalShippingOutlined, VerifiedUserOutlined,
-  CachedOutlined, ShareOutlined, InfoOutlined, ShoppingBagOutlined,
+  FavoriteBorder, Favorite, // Import filled heart icon
+  LocalShippingOutlined, VerifiedUserOutlined,
+  CachedOutlined, ShareOutlined, ShoppingBagOutlined,
   FlashOn
 } from "@mui/icons-material";
 
-/* ---------- LOGIC REMAINS EXACTLY SAME ---------- */
+// ... (parseSku logic remains same)
 const parseSku = (sku) => {
   if (!sku) return {};
   const [colorCode, purity, size] = sku.split("-");
@@ -29,6 +31,7 @@ const parseSku = (sku) => {
 const ProductDetailsPage = () => {
   const { productId } = useParams();
   const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist(); // 2. Destructure Context
 
   const [product, setProduct] = useState(null);
   const [variants, setVariants] = useState([]);
@@ -42,9 +45,12 @@ const ProductDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [fade, setFade] = useState(false);
 
-  /* --- REVIEWS STATE --- */
+  // Reviews State
   const [reviews, setReviews] = useState([]);
   const [ratingStats, setRatingStats] = useState({ avg: 0, total: 0, counts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } });
+
+  // 3. Check if current product is in wishlist
+  const isWishlisted = useMemo(() => isInWishlist(Number(productId)), [productId, isInWishlist]);
 
   useEffect(() => {
     const load = async () => {
@@ -59,11 +65,13 @@ const ProductDetailsPage = () => {
         }));
         setProduct(data || {});
         setVariants(formattedVariants);
+        
         const firstImage = data?.images?.[0]?.imageUrl || "/placeholder.png";
         setVariantImages(data?.images || []);
         setMainImage(firstImage);
         setSelectedImage(firstImage);
 
+        // Load Reviews
         const reviewRes = await fetch(`http://localhost:8080/auth/reviews/product/${productId}`);
         const reviewData = await reviewRes.json();
         setReviews(reviewData);
@@ -85,6 +93,7 @@ const ProductDetailsPage = () => {
     if (productId) load();
   }, [productId]);
 
+  // ... (Variant Logic: colors, purities, sizes, useEffects... remains same)
   const colors = useMemo(() => [...new Set(variants.map(v => v.color).filter(Boolean))], [variants]);
   const purities = useMemo(() => [...new Set(variants.map(v => v.purity).filter(Boolean))], [variants]);
   const sizes = useMemo(() => [...new Set(variants.map(v => v.size).filter(Boolean))].sort((a, b) => a - b), [variants]);
@@ -143,13 +152,18 @@ const ProductDetailsPage = () => {
     addToCart({ productId: Number(productId), variantId: selectedVariant.id, quantity: 1, price: originalPrice });
   };
 
+  // 4. Wishlist Handler
+  const handleWishlistToggle = () => {
+  toggleWishlist(Number(productId));
+};
+
+
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress color="inherit" /></Box>;
 
   return (
     <SellerLayout>
       <Box sx={{ bgcolor: "#F8F9FA", minHeight: "100vh", pb: 10 }}>
         <Container maxWidth="lg">
-          {/* Breadcrumbs */}
           <Breadcrumbs sx={{ py: 2, fontSize: '0.8rem', color: 'text.secondary' }}>
             <Link underline="hover" color="inherit" href="/">Home</Link>
             <Link underline="hover" color="inherit" href="/shop">Jewelry</Link>
@@ -157,18 +171,17 @@ const ProductDetailsPage = () => {
           </Breadcrumbs>
 
           <Grid container spacing={4}>
-            {/* LEFT: IMAGE GALLERY (Amazon Style) */}
+            
+            {/* LEFT: IMAGE GALLERY */}
             <Grid item xs={12} md={7}>
               <Box sx={{ position: 'sticky', top: 100 }}>
                 <Grid container spacing={2}>
+                  {/* Thumbnails */}
                   <Grid item xs={2}>
                     <Stack spacing={1}>
                       {variantImages.map((img) => (
                         <Paper
-                          key={img.id}
-                          elevation={0}
-                          component="img"
-                          src={img.imageUrl}
+                          key={img.id} elevation={0} component="img" src={img.imageUrl}
                           onClick={() => handleSelectImage(img.imageUrl)}
                           onMouseEnter={() => handleHoverImage(img.imageUrl)}
                           onMouseLeave={handleLeaveImage}
@@ -181,12 +194,26 @@ const ProductDetailsPage = () => {
                       ))}
                     </Stack>
                   </Grid>
+                  {/* Main Image */}
                   <Grid item xs={10}>
                     <Paper elevation={0} sx={{ position: 'relative', bgcolor: '#fff', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E0E0E0' }}>
                       <Box component="img" src={mainImage} sx={{ width: "100%", aspectRatio: '1/1', objectFit: "contain", transition: "opacity 0.2s", opacity: fade ? 0.5 : 1 }} />
-                      <IconButton sx={{ position: 'absolute', top: 15, right: 15, bgcolor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: '#fff' } }}>
-                        <FavoriteBorder fontSize="small" />
+                      
+                      {/* 5. Wishlist Button Implementation */}
+                      <IconButton 
+                        onClick={handleWishlistToggle}
+                        sx={{ 
+                            position: 'absolute', top: 15, right: 15, 
+                            bgcolor: 'rgba(255,255,255,0.9)', 
+                            backdropFilter: 'blur(4px)', 
+                            color: isWishlisted ? "#D32F2F" : "#757575", // Red if active
+                            '&:hover': { bgcolor: '#fff', color: "#D32F2F" },
+                            transition: "all 0.2s"
+                        }}
+                      >
+                        {isWishlisted ? <Favorite fontSize="small" /> : <FavoriteBorder fontSize="small" />}
                       </IconButton>
+
                     </Paper>
                   </Grid>
                 </Grid>
@@ -195,7 +222,8 @@ const ProductDetailsPage = () => {
 
             {/* RIGHT: PURCHASE PANEL */}
             <Grid item xs={12} md={5}>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: '8px', border: '1px solid #E0E0E0', bgcolor: '#fff' }}>
+                {/* ... (Same Right Panel Code) */}
+                <Paper elevation={0} sx={{ p: 3, borderRadius: '8px', border: '1px solid #E0E0E0', bgcolor: '#fff' }}>
                 <Stack spacing={1}>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                     <Box>
@@ -352,7 +380,8 @@ const ProductDetailsPage = () => {
             </Grid>
           </Grid>
 
-          {/* REVIEWS SECTION - AMZ STYLE */}
+          {/* ... (Reviews Section same as before) ... */}
+          {/* Include the Reviews Box here exactly as in the previous code */}
           <Box id="reviews" sx={{ mt: 8, pt: 6, borderTop: '1px solid #E0E0E0' }}>
             <Grid container spacing={6}>
               <Grid item xs={12} md={4}>
@@ -406,7 +435,7 @@ const ProductDetailsPage = () => {
             </Grid>
           </Box>
 
-          {/* PRODUCT DETAILS GRID */}
+          {/* ... (Product Description / Specs Grid Same as before) ... */}
           <Box sx={{ mt: 10, bgcolor: '#fff', p: 4, borderRadius: '8px', border: '1px solid #E0E0E0' }}>
             <Grid container spacing={8}>
               <Grid item xs={12} md={6}>
@@ -434,6 +463,7 @@ const ProductDetailsPage = () => {
               </Grid>
             </Grid>
           </Box>
+
         </Container>
       </Box>
     </SellerLayout>

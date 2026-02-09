@@ -1,27 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box,
-  Grid,
-  Stepper,
-  Step,
-  StepLabel,
-  Button,
-  Typography,
-  Paper,
-  Breadcrumbs,
-  Link as MuiLink,
-  useTheme,
-  useMediaQuery,
-  CircularProgress,
-  Divider,
+  Box, Grid, Button, Typography, Paper, Stack, Divider,
+  Snackbar, Alert, CircularProgress
 } from "@mui/material";
-import { motion, AnimatePresence } from "framer-motion";
 
 import SellerLayout from "../../layouts/SellerLayout";
 import sellerApi from "../../api/sellerApi";
 
-// STEP COMPONENTS
+// Steps
 import CategoryStep from "./CategoryStep";
 import BrandStep from "./BrandStep";
 import ProductInfoStep from "./ProductInfoStep";
@@ -35,37 +22,19 @@ import ProductManufact from "./ProductManufact";
 import GalleryUpload from "./GalleryUpload";
 
 const steps = [
-  "Category",
-  "Brand",
-  "Info",
-  "Attributes",
-  "Variants",
-  "Pricing",
-  "Thumbnail",
-  "Features",
-  "Specs",
-  "Manufacturer",
-  "Gallery",
+  "Category", "Brand", "Product Information", "Attributes", "Variants",
+  "Pricing", "Thumbnail Image", "Features", "Specifications", "From Manufacturer", "Gallery Upload",
 ];
 
 const CreateProductPage = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const [activeStepIndex, setActiveStepIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
-
+  // Main State
   const [state, setState] = useState({
     categoryId: "",
     brandId: "",
-    productInfo: {
-      name: "",
-      description: "",
-      sku: "",
-      weight: "",
-    },
-    attributes: {},
+    productInfo: { name: "", description: "", sku: "", weight: "" },
+    attributeSets: [],     // Each set: { attrId: [valueIds] }
     variants: [],
     features: [],
     specifications: [],
@@ -73,326 +42,301 @@ const CreateProductPage = () => {
     thumbnailFile: null,
     images: [],
     productId: null,
-
-    // ✅ STEP COMPLETION FLAGS
-    variantsSaved: false,
-    pricingSaved: false,
-    attributesSaved: false,
-    infoSaved: false,
-    thumbnailSaved: false,
-    featuresSaved: false,
-    specsSaved: false,
-    manufacturerSaved: false,
-    gallerySaved: false,
   });
 
-  const dispatch = (update) =>
-    setState((prev) => ({ ...prev, ...update }));
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState(false);
 
-  // ===========================
-  // NEXT STEP HANDLER
-  // ===========================
+  const dispatch = (update) => setState((prev) => ({ ...prev, ...update }));
+
+  const requireProductId = () => {
+    if (!state.productId) {
+      alert("Please complete Product Information first");
+      throw new Error("productId missing");
+    }
+  };
+
   const goNext = async () => {
-    if (loading) return;
-
     const currentStep = steps[activeStepIndex];
     setLoading(true);
-
     try {
+      console.log(`=== Step Started: ${currentStep} ===`);
+
       switch (currentStep) {
+        // --------------------
         case "Category":
-          if (!state.categoryId) {
-            alert("Select a category first!");
-            return;
-          }
-          console.log("Category step completed:", state.categoryId);
+          console.log("Selected Category:", state.categoryId);
+          if (!state.categoryId) return alert("Select a category");
           break;
 
+        // --------------------
         case "Brand":
-          if (!state.brandId) {
-            alert("Select a brand first!");
-            return;
-          }
-          console.log("Brand step completed:", state.brandId);
+          console.log("Selected Brand:", state.brandId);
+          if (!state.brandId) return alert("Select a brand");
           break;
 
-        case "Info": {
-          if (!state.infoSaved) {
-            const res = await sellerApi.createProduct({
-              categoryId: state.categoryId,
-              brandId: state.brandId,
-              ...state.productInfo,
+        // --------------------
+        case "Product Information":
+          console.log("Product Info:", state.productInfo);
+          if (!state.productInfo.name) return alert("Enter product name");
+
+          const productData = {
+            categoryId: state.categoryId,
+            brandId: state.brandId,
+            ...state.productInfo,
+          };
+          console.log("Payload for createProduct:", productData);
+          const productRes = await sellerApi.createProduct(productData);
+          console.log("Created Product Response:", productRes);
+          dispatch({ productId: productRes.id || productRes.productId });
+          break;
+
+        // --------------------
+        case "Attributes":
+          requireProductId();
+          if (!state.attributeSets.length) return alert("Select at least one attribute set");
+
+          // Merge all attribute sets
+          const mergedAttributes = {};
+          state.attributeSets.forEach((set) => {
+            Object.entries(set).forEach(([attrId, valIds]) => {
+              mergedAttributes[attrId] = Array.from(
+                new Set([...(mergedAttributes[attrId] || []), ...valIds.map(Number)])
+              );
             });
-            dispatch({ productId: res.id || res.productId, infoSaved: true });
-            console.log("Product Info saved:", res);
-          }
+          });
+
+          const payload = Object.entries(mergedAttributes).map(([attrId, valIds]) => ({
+            attributeId: Number(attrId),
+            valueIds: valIds.map(Number),
+          }));
+
+          console.log("Payload for saveAttributes:", payload);
+          await sellerApi.saveAttributes(state.productId, payload);
+          console.log("Attributes saved successfully");
           break;
+
+        // --------------------
+// --------------------
+// Variants Step
+// --------------------
+case "Variants": {
+  requireProductId();
+  console.log("Variants before saving:", state.variants);
+
+  if (!state.variants.length) return alert("Add at least one variant");
+
+  const createdVariants = [];
+
+  for (const variant of state.variants) {
+    // Prepare payload for backend
+    const payload = {
+      sku: variant.sku,
+      stock: Number(variant.stock) || 0,
+      attributes: {},
+    };
+
+    // Convert attributes array to object map
+    Object.entries(state.attributes).forEach(([attrId, valIds]) => {
+      if (valIds.length > 0) {
+        // Only take the first selected value for this attribute
+        payload.attributes[attrId] = Number(valIds[0]);
+      }
+    });
+
+    console.log("Payload for createVariant:", payload);
+
+    try {
+      const res = await sellerApi.createVariant(state.productId, payload);
+      console.log("Variant Created:", res);
+
+      const backendVariantId = res.id || res.variantId;
+
+      // Save price & discount if available
+      if (variant.price) {
+        await sellerApi.setVariantPrice(backendVariantId, {
+          mrp: Number(variant.price.mrp) || 0,
+          sellingPrice: Number(variant.price.sellingPrice) || 0,
+        });
+        if (variant.discount) {
+          await sellerApi.setVariantDiscount(backendVariantId, {
+            discountType: variant.discount.discountType || "PERCENT",
+            discountValue: Number(variant.discount.discountValue) || 0,
+          });
         }
+      }
 
-        case "Attributes": {
-          if (!state.productId) {
-            alert("Product ID missing!");
-            return;
-          }
-          if (!state.attributesSaved) {
-            const payload = Object.entries(state.attributes).flatMap(
-              ([attrId, valIds]) =>
-                valIds.map((valId) => ({
-                  attributeId: Number(attrId),
-                  valueId: Number(valId),
-                }))
-            );
-            await sellerApi.saveAttributes(state.productId, payload);
-            dispatch({ attributesSaved: true });
-            console.log("Attributes saved:", payload);
-          }
-          break;
-        }
+      createdVariants.push({ ...variant, id: backendVariantId });
+    } catch (err) {
+      console.error(`Failed to create/save variant ${variant.sku}`, err);
+      alert(`Failed to create variant ${variant.sku}: ${err.response?.data?.message || err.message}`);
+    }
+  }
 
-        case "Variants":
-          if (!state.variantsSaved) {
-            alert("Save variants first in Variant Step!");
-            return;
-          }
-          console.log("Variants step completed");
-          break;
+  dispatch({ variants: createdVariants });
+  console.log("All Variants Saved:", createdVariants);
+  break;
+}
 
+
+
+        // --------------------
         case "Pricing":
-          if (!state.pricingSaved) {
-            alert("Save pricing first in Pricing Step!");
-            return;
+          requireProductId();
+          for (const v of state.variants) {
+            if (!v.id) continue;
+            console.log("Setting price for variant:", v.sku);
+            await sellerApi.setVariantPrice(v.id, {
+              mrp: Number(v.price?.mrp || 0),
+              sellingPrice: Number(v.price?.sellingPrice || 0),
+            });
+            await sellerApi.setVariantDiscount(v.id, {
+              discountType: v.discount?.discountType || "PERCENT",
+              discountValue: Number(v.discount?.discountValue || 0),
+            });
           }
-          console.log("Pricing step completed");
+          console.log("Pricing saved");
           break;
 
-        case "Thumbnail": {
-  if (!state.productId) {
-    alert("Product ID missing!");
-    return;
-  }
-
-  if (!state.thumbnailSaved) {
-    // Check if at least one variant has a file selected
-    const hasFiles = state.variants.some(v => v.thumbnailFile);
-    if (!hasFiles) {
-      alert("Upload at least one thumbnail for your variants!");
-      return;
-    }
-
-    try {
-      // Prepare FormData
-      const fd = new FormData();
-      state.variants.forEach(v => {
-        if (v.thumbnailFile) fd.append("images", v.thumbnailFile, v.sku);
-      });
-
-      // Upload all thumbnails via sellerApi
-      console.log("Uploading all variant thumbnails...");
-      await sellerApi.uploadImage(state.productId, fd);
-
-      dispatch({ thumbnailSaved: true });
-      console.log("✅ Thumbnails uploaded successfully");
-      alert("All thumbnails uploaded!");
-    } catch (err) {
-      console.error("❌ Failed to upload thumbnails", err);
-      alert("Failed to upload thumbnails. Check console.");
-      return; // Stop step progression
-    }
-  }
-  break;
-}
-
-
-        case "Features":
-          if (!state.featuresSaved) {
-            if (!state.features.length) {
-              alert("Add at least one feature!");
-              return;
-            }
-            await sellerApi.saveFeatures(state.productId, state.features);
-            dispatch({ featuresSaved: true });
-            console.log("Features saved:", state.features);
+        // --------------------
+        case "Thumbnail Image":
+          requireProductId();
+          if (state.thumbnailFile) {
+            console.log("Uploading thumbnail:", state.thumbnailFile);
+            const formData = new FormData();
+            formData.append("file", state.thumbnailFile);
+            await sellerApi.uploadImage(state.productId, formData);
           }
           break;
 
-        case "Specs":
-          if (!state.specsSaved) {
-            if (!state.specifications.length) {
-              alert("Add at least one specification!");
-              return;
-            }
-            await sellerApi.saveSpecifications(
-              state.productId,
-              state.specifications
-            );
-            dispatch({ specsSaved: true });
-            console.log("Specifications saved:", state.specifications);
-          }
-          break;
+        // --------------------
+      case "Features": {
+  requireProductId();
 
-        case "Manufacturer":
-          if (!state.manufacturerSaved) {
-            if (!state.manufacturer) {
-              alert("Enter manufacturer info!");
-              return;
-            }
-            await sellerApi.saveManufacturer(state.productId, state.manufacturer);
-            dispatch({ manufacturerSaved: true });
-            console.log("Manufacturer saved:", state.manufacturer);
-          }
-          break;
+  if (!state.features.length) return alert("Add at least one feature");
 
-        case "Gallery": {
-  if (!state.gallerySaved) {
-    if (!state.images || state.images.length === 0) {
-      alert("Upload at least one image!");
-      return;
-    }
+  // Convert features to array of strings
+  const payload = state.features.map(f => (typeof f === "string" ? f : f.feature || f.text || ""));
+  console.log("Saving features:", payload);
 
-    try {
-      dispatch({ uploadingGallery: true }); // optional: set uploading state
-      const fd = new FormData();
-      state.images.forEach((img) => fd.append("files", img.file || img)); 
-      // use img.file if stored as {file, preview}, fallback to img if raw File
-
-      await sellerApi.uploadImage(state.productId, fd); // wait for upload
-      dispatch({ gallerySaved: true, uploadingGallery: false });
-      console.log("Gallery images uploaded successfully!");
-    } catch (err) {
-      console.error("Failed to upload gallery images:", err);
-      alert("Failed to upload gallery images. Check console.");
-      dispatch({ uploadingGallery: false });
-    }
+  try {
+    await sellerApi.saveFeatures(state.productId, payload);
+    console.log("Features saved successfully");
+  } catch (err) {
+    console.error("API Error:", err);
+    alert("Failed to save features: " + (err.response?.data?.message || err.message));
   }
   break;
 }
+
+
+        // --------------------
+        case "Specifications":
+          requireProductId();
+          if (!state.specifications.length) return alert("Add at least one specification");
+          console.log("Saving specifications:", state.specifications);
+          await sellerApi.saveSpecifications(state.productId, state.specifications);
+          break;
+
+        // --------------------
+        case "From Manufacturer":
+          requireProductId();
+          if (!state.manufacturer) return alert("Enter manufacturer info");
+          console.log("Saving manufacturer info:", state.manufacturer);
+          await sellerApi.saveManufacturer(state.productId, { name: state.manufacturer });
+          break;
+
+        // --------------------
+        case "Gallery Upload":
+          requireProductId();
+          if (state.images.length) {
+            console.log("Uploading gallery images:", state.images);
+            for (const file of state.images) {
+              const formData = new FormData();
+              formData.append("file", file);
+              await sellerApi.uploadImage(state.productId, formData);
+            }
+          }
+          break;
 
         default:
           break;
       }
 
-      // ✅ Go to next step if not last
-      if (activeStepIndex < steps.length - 1) {
-        setActiveStepIndex((prev) => prev + 1);
-      } else {
-        console.log("All steps completed! Product ID:", state.productId);
-      }
+      console.log(`=== Step Finished: ${currentStep} ===`);
+      setSuccessMsg(true);
+      if (activeStepIndex < steps.length - 1) setActiveStepIndex(i => i + 1);
+
     } catch (err) {
-      console.error(`Error in step "${currentStep}":`, err);
-      alert(`Error in step "${currentStep}". Check console.`);
+      console.error("API Error:", err);
+      alert("Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
-  const goBack = () => {
-    if (activeStepIndex > 0) {
-      setActiveStepIndex((prev) => prev - 1);
-    }
-  };
+  const goBack = () => { if (activeStepIndex > 0) setActiveStepIndex(i => i - 1); };
 
-  // ===========================
-  // RENDER STEP
-  // ===========================
   const renderStep = () => {
     const props = { state, dispatch };
-
-    const map = {
-      Category: <CategoryStep {...props} />,
-      Brand: <BrandStep {...props} />,
-      Info: <ProductInfoStep {...props} />,
-      Attributes: <AttributeSelection {...props} />,
-      Variants: <VariantStep {...props} />,
-      Pricing: <PricingStep {...props} />,
-      Thumbnail: <ThumbnailUpload {...props} />,
-      Features: <ProductFeatureStep {...props} />,
-      Specs: <ProductSpecification {...props} />,
-      Manufacturer: <ProductManufact {...props} />,
-      Gallery: <GalleryUpload {...props} />,
-    };
-
-    return map[steps[activeStepIndex]];
+    const components = [
+      <CategoryStep {...props} />, <BrandStep {...props} />, <ProductInfoStep {...props} />,
+      <AttributeSelection {...props} />, <VariantStep {...props} />, <PricingStep {...props} />,
+      <ThumbnailUpload {...props} />, <ProductFeatureStep {...props} />, <ProductSpecification {...props} />,
+      <ProductManufact {...props} />, <GalleryUpload {...props} />
+    ];
+    return components[activeStepIndex];
   };
 
   return (
     <SellerLayout>
-      <Box p={{ xs: 2, md: 5 }} minHeight="100vh">
-        <Box mb={4} display="flex" justifyContent="space-between">
-          <Box>
-            <Breadcrumbs sx={{ mb: 1 }}>
-              <MuiLink underline="none" color="primary">
-                Dashboard
-              </MuiLink>
-              <Typography>Create Listing</Typography>
-            </Breadcrumbs>
-            <Typography variant="h4" fontWeight={800}>
-              Product Wizard
-            </Typography>
-          </Box>
-          <Typography>
-            Step {activeStepIndex + 1} / {steps.length}
-          </Typography>
-        </Box>
+      <Snackbar open={successMsg} autoHideDuration={2000} onClose={() => setSuccessMsg(false)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="success" variant="filled" sx={{ width: '100%' }}>Step Saved Successfully!</Alert>
+      </Snackbar>
 
-        <Grid container spacing={4}>
+      <Box sx={{ bgcolor: "#f4f7fe", minHeight: "100vh", p: 4 }}>
+        <Grid container spacing={3}>
+          {/* Sidebar */}
           <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 3 }}>
-              <Stepper
-                activeStep={activeStepIndex}
-                orientation={isMobile ? "horizontal" : "vertical"}
-              >
-                {steps.map((label, idx) => (
-                  <Step key={label} completed={activeStepIndex > idx}>
-                    <StepLabel>{label}</StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
+            <Paper sx={{ p: 2, borderRadius: 3 }}>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Steps</Typography>
+              {steps.map((step, idx) => (
+                <Box
+                  key={step}
+                  onClick={() => { if (idx <= 2 || state.productId) setActiveStepIndex(idx); }}
+                  sx={{
+                    p: 1.5, mb: 1, borderRadius: 2, cursor: "pointer", display: "flex", alignItems: "center", gap: 2,
+                    bgcolor: activeStepIndex === idx ? "primary.main" : "transparent",
+                    color: activeStepIndex === idx ? "white" : "text.secondary",
+                  }}
+                >
+                  <Box sx={{
+                    width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                    bgcolor: activeStepIndex > idx ? "success.main" : "grey.300", color: "white", fontSize: 12
+                  }}>
+                    {activeStepIndex > idx ? "✓" : idx + 1}
+                  </Box>
+                  <Typography variant="body2" fontWeight={activeStepIndex === idx ? 700 : 500}>{step}</Typography>
+                </Box>
+              ))}
             </Paper>
           </Grid>
 
+          {/* Content */}
           <Grid item xs={12} md={9}>
-            <Paper sx={{ p: 4, minHeight: "65vh" }}>
-              <Box flexGrow={1}>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeStepIndex}
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                  >
-                    <Typography variant="h5" mb={3}>
-                      {steps[activeStepIndex]}
-                    </Typography>
-                    {renderStep()}
-                  </motion.div>
-                </AnimatePresence>
+            <Paper sx={{ p: 4, borderRadius: 4, minHeight: "70vh", display: "flex", flexDirection: "column" }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h5" fontWeight={800} sx={{ mb: 4 }}>{steps[activeStepIndex]}</Typography>
+                {renderStep()}
               </Box>
-
               <Divider sx={{ my: 4 }} />
-
-              <Box display="flex" justifyContent="space-between">
-                <Button disabled={activeStepIndex === 0 || loading} onClick={goBack}>
-                  Back
+              <Stack direction="row" justifyContent="space-between">
+                <Button onClick={goBack} disabled={activeStepIndex === 0 || loading}>Back</Button>
+                <Button variant="contained" onClick={activeStepIndex === steps.length - 1 ? () => navigate("/seller/products") : goNext} disabled={loading} sx={{ px: 4 }}>
+                  {loading ? <CircularProgress size={24} color="inherit" /> : activeStepIndex === steps.length - 1 ? "Finish" : "Save & Next"}
                 </Button>
-
-                <Button
-                  variant="contained"
-                  disabled={loading}
-                  onClick={
-                    activeStepIndex === steps.length - 1
-                      ? () => navigate("/seller/products")
-                      : goNext
-                  }
-                >
-                  {loading ? (
-                    <CircularProgress size={22} />
-                  ) : activeStepIndex === steps.length - 1 ? (
-                    "Finish"
-                  ) : (
-                    "Save & Continue"
-                  )}
-                </Button>
-              </Box>
+              </Stack>
             </Paper>
           </Grid>
         </Grid>

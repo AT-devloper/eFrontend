@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react"; 
 import {
   AppBar, Toolbar, Typography, IconButton, Drawer,
   List, ListItemButton, ListItemText, Box, Avatar,
@@ -15,11 +15,13 @@ import {
   Close as CloseIcon,
   LocalShipping as OrdersIcon,
   Login as LoginIcon,
+  Menu as MenuIcon 
 } from "@mui/icons-material";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "../../context/UserContext";
 import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext"; // <--- 1. IMPORT ADDED
 
 import Login from "../../pages/Login";
 import Register from "../../pages/Register";
@@ -28,6 +30,10 @@ import ForgotPassword from "../../components/auth/ForgotPassword";
 export default function Navbar() {
   const { user, logout } = useUser();
   const { cart } = useCart();
+  
+  // <--- 2. GET REAL WISHLIST DATA --->
+  const { wishlist } = useWishlist(); 
+  
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -39,8 +45,8 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Fake Wishlist count - replace with actual context logic later
-  const wishlistCount = 0;
+  // <--- 3. CALCULATE REAL COUNT --->
+  const wishlistCount = wishlist?.length || 0;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -84,7 +90,8 @@ export default function Navbar() {
     { text: "Home", icon: <HomeIcon />, path: "/" },
     { text: "Shop Collections", icon: <StoreIcon />, path: "/products" },
     ...(user ? [{ text: "My Orders", icon: <OrdersIcon />, path: "/my-orders" }] : []),
-    { text: "My Favorites", icon: <FavoriteIcon />, path: "/wishlist" },
+    // Show wishlist only if user is logged in
+    ...(user ? [{ text: "My Favorites", icon: <FavoriteIcon />, path: "/wishlist" }] : []),
     { text: "Shopping Cart", icon: <ShoppingCartIcon />, path: "/cart" },
   ];
 
@@ -144,8 +151,8 @@ export default function Navbar() {
                   <SearchIcon />
                 </IconButton>
 
-                {/* --- WISHLIST ICON (Desktop Only) --- */}
-                {!isMobile && (
+                {/* --- WISHLIST ICON (Desktop Only, Only if Logged In) --- */}
+                {!isMobile && user && (
                   <IconButton 
                     onClick={() => navigate("/wishlist")}
                     component={motion.button} 
@@ -159,37 +166,47 @@ export default function Navbar() {
                 )}
 
                 {!user ? (
-                  <Button
-                    onClick={handleOpenAuth}
-                    component={motion.button}
-                    whileHover={{ scale: 1.05 }}
-                    variant="outlined" startIcon={<LoginIcon />}
-                    sx={{ borderRadius: "50px", fontWeight: 800, color: isScrolled ? "secondary.main" : "primary.main", borderColor: isScrolled ? "secondary.main" : "primary.main" }}
-                  >
-                    Login
-                  </Button>
+                  !isMobile ? (
+                    <Button
+                      onClick={handleOpenAuth}
+                      component={motion.button}
+                      whileHover={{ scale: 1.05 }}
+                      variant="outlined" startIcon={<LoginIcon />}
+                      sx={{ borderRadius: "50px", fontWeight: 800, color: isScrolled ? "secondary.main" : "primary.main", borderColor: isScrolled ? "secondary.main" : "primary.main" }}
+                    >
+                      Login
+                    </Button>
+                  ) : (
+                    <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: isScrolled ? "secondary.main" : "primary.main", ml: 1 }}>
+                      <MenuIcon />
+                    </IconButton>
+                  )
                 ) : (
-                  <Box
-                    onClick={() => setDrawerOpen(true)}
-                    component={motion.div}
-                    whileHover={{ x: 5 }}
-                    sx={{
-                      display: "flex", alignItems: "center", gap: 1.5, cursor: "pointer", ml: 1, pl: 0.6, pr: 2, py: 0.6,
-                      borderRadius: "50px", border: "1px solid",
-                      borderColor: isScrolled ? "rgba(216,182,123,0.3)" : "rgba(74,46,46,0.1)",
-                      transition: "all 0.3s", "&:hover": { bgcolor: "rgba(216,182,123,0.1)" }
-                    }}
-                  >
-                    <Avatar src={user?.avatar} sx={{ width: 34, height: 34, bgcolor: "secondary.main", color: "primary.main" }}>
-                      {displayName[0].toUpperCase()}
-                    </Avatar>
-                    {!isMobile && (
+                  isMobile ? (
+                    <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: isScrolled ? "secondary.main" : "primary.main", ml: 1 }}>
+                      <MenuIcon />
+                    </IconButton>
+                  ) : (
+                    <Box
+                      onClick={() => setDrawerOpen(true)}
+                      component={motion.div}
+                      whileHover={{ x: 5 }}
+                      sx={{
+                        display: "flex", alignItems: "center", gap: 1.5, cursor: "pointer", ml: 1, pl: 0.6, pr: 2, py: 0.6,
+                        borderRadius: "50px", border: "1px solid",
+                        borderColor: isScrolled ? "rgba(216,182,123,0.3)" : "rgba(74,46,46,0.1)",
+                        transition: "all 0.3s", "&:hover": { bgcolor: "rgba(216,182,123,0.1)" }
+                      }}
+                    >
+                      <Avatar src={user?.avatar} sx={{ width: 34, height: 34, bgcolor: "secondary.main", color: "primary.main" }}>
+                        {displayName[0].toUpperCase()}
+                      </Avatar>
                       <Box sx={{ textAlign: 'left' }}>
                         <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 800, color: isScrolled ? "secondary.light" : "primary.light", display: 'block', lineHeight: 1.2 }}>PROFILE</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 800, color: isScrolled ? "white" : "primary.main", lineHeight: 1 }}>{shortName}</Typography>
                       </Box>
-                    )}
-                  </Box>
+                    </Box>
+                  )
                 )}
               </Box>
             </Toolbar>

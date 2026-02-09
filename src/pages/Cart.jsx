@@ -1,236 +1,276 @@
-// pages/Cart.js
 import React, { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
-import { FaTrash, FaMinus, FaPlus, FaArrowLeft } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaTimes, FaMinus, FaPlus, FaArrowLeft, FaLock, FaTrashAlt } from "react-icons/fa";
 import {
   Box,
   Container,
   Typography,
   Button,
-  Stack,
   IconButton,
   Divider,
   CircularProgress,
-  Paper,
   Grid,
+  useMediaQuery,
+  Stack
 } from "@mui/material";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 
+// --- Theme Config ---
+const COLORS = {
+  gold: "#C5A059",
+  black: "#000000",
+  white: "#FFFFFF",
+  gray: "#F9F9F9",
+  textLight: "#888888",
+  border: "#EAEAEA",
+};
+
 const Cart = () => {
-  const { cart, loading, removeItem, updateQuantity, totalPrice } = useCart();
+  const { cart, loading, removeItem, updateQuantity, totalPrice, clearCart } = useCart(); // <--- Imported clearCart
   const navigate = useNavigate();
   const [checkingOut, setCheckingOut] = useState(false);
+  const isMobile = useMediaQuery((theme) => theme.breakpoints.down("md"));
 
   if (loading) {
     return (
-      <Box
-        sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
-      >
-        <CircularProgress color="inherit" />
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", bgcolor: COLORS.white }}>
+        <CircularProgress sx={{ color: COLORS.gold }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ bgcolor: "#F9FAFB", minHeight: "100vh" }}>
+    <Box sx={{ bgcolor: COLORS.gray, minHeight: "100vh" }}>
       <Navbar />
 
-      <Container sx={{ py: { xs: 4, md: 8 }, maxWidth: "lg" }}>
-        {/* Header */}
-        <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h4" fontWeight={800} sx={{ letterSpacing: "-0.5px" }}>
-            Shopping Cart ({cart.length})
-          </Typography>
-          <Button
-            startIcon={<FaArrowLeft />}
-            onClick={() => navigate("/")}
-            sx={{ textTransform: "none", color: "text.secondary" }}
-          >
-            Continue Shopping
-          </Button>
+      <Container maxWidth="lg" sx={{ pt: { xs: 4, md: 8 }, pb: 8 }}>
+        
+        {/* --- Header Section --- */}
+        <Box mb={6} display="flex" justifyContent="space-between" alignItems="center">
+          
+          {/* Left: Title & Back Button */}
+          <Box display="flex" alignItems="center" gap={2}>
+            <IconButton onClick={() => navigate("/products")} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 1 }}>
+              <FaArrowLeft size={14} />
+            </IconButton>
+            <Typography variant={isMobile ? "h4" : "h3"} sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, letterSpacing: -1 }}>
+              MY CART <span style={{ color: COLORS.textLight, fontSize: "1.5rem", fontWeight: 400, marginLeft: "8px" }}>{cart.length} ITEMS</span>
+            </Typography>
+          </Box>
+
+          {/* Right: Clear All Button (Only show if cart has items) */}
+          {cart.length > 0 && (
+            <Button 
+              onClick={clearCart} 
+              startIcon={<FaTrashAlt size={14} />}
+              sx={{ 
+                color: "red", 
+                fontWeight: 700, 
+                textTransform: "uppercase", 
+                letterSpacing: 1,
+                "&:hover": { bgcolor: "#FFF0F0" } 
+              }}
+            >
+              CLEAR CART
+            </Button>
+          )}
         </Box>
 
         {cart.length === 0 ? (
-          <Paper sx={{ p: 8, textAlign: "center", borderRadius: 4 }}>
-            <Typography variant="h6" color="text.secondary">
-              Your bag is empty.
-            </Typography>
+          <Box textAlign="center" py={15} borderRadius={2} border={`1px dashed ${COLORS.border}`} bgcolor={COLORS.white}>
+            <Typography variant="h4" sx={{ fontFamily: "'Playfair Display', serif", mb: 2 }}>Your bag is empty.</Typography>
+            <Typography color="text.secondary" mb={4}>Discover our new collection.</Typography>
             <Button
               variant="contained"
-              sx={{ mt: 2, px: 4, borderRadius: 10 }}
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/products")}
+              sx={{
+                bgcolor: COLORS.black,
+                color: COLORS.white,
+                borderRadius: 0,
+                px: 6,
+                py: 1.5,
+                "&:hover": { bgcolor: COLORS.gold, color: COLORS.black },
+              }}
             >
-              Fill it up
+              SHOP NOW
             </Button>
-          </Paper>
+          </Box>
         ) : (
           <Grid container spacing={4}>
-            {/* Left: Items */}
-            <Grid item xs={12} md={8}>
-              <Stack spacing={2}>
-                {cart.map((item) => (
-                  <Paper
-                    key={item.cartItemId}
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: 4,
-                      border: "1px solid #E5E7EB",
-                      display: "flex",
-                      gap: 2,
-                    }}
-                  >
-                    <Box
-                      component="img"
-                      src={item.image || "/placeholder.png"}
-                      alt={item.productName}
-                      onError={(e) => (e.target.src = "/placeholder.png")}
-                      sx={{
-                        width: 120,
-                        height: 140,
-                        objectFit: "cover",
-                        borderRadius: 3,
-                        bgcolor: "#f0f0f0",
-                      }}
-                    />
-                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                        <Typography variant="subtitle1" fontWeight={700}>
-                          {item.productName}
-                        </Typography>
-                        <IconButton
-                          size="small"
-                          onClick={() => removeItem(item.cartItemId)}
-                          sx={{ color: "#9CA3AF", "&:hover": { color: "#EF4444" } }}
-                        >
-                          <FaTrash size={14} />
-                        </IconButton>
-                      </Box>
-
-                      {item.variantName ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          Selected: {item.variantName}
-                        </Typography>
-                      ) : item.variantId ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          Variant ID: {item.variantId}
-                        </Typography>
-                      ) : null}
-
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Unit Price: ₹{item.price.toLocaleString()}
-                      </Typography>
-
+            {/* --- Left Column: Cart Items --- */}
+            <Grid item xs={12} lg={8}>
+              <Stack spacing={3}>
+                <AnimatePresence>
+                  {cart.map((item) => (
+                    <motion.div
+                      key={item.cartItemId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
                       <Box
-                        sx={{
-                          mt: "auto",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                        }}
+                        display="flex"
+                        flexDirection={isMobile ? "column" : "row"}
+                        gap={3}
+                        p={3}
+                        bgcolor={COLORS.white}
+                        borderRadius={2}
+                        boxShadow="0 6px 18px rgba(0,0,0,0.05)"
+                        alignItems="center"
+                        sx={{ "&:hover": { boxShadow: "0 10px 25px rgba(0,0,0,0.1)" } }}
                       >
+                        {/* Product Image */}
                         <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: 2,
-                            bgcolor: "#fff",
-                          }}
+                          sx={{ width: 140, height: 160, cursor: "pointer", flexShrink: 0 }}
+                          onClick={() => navigate(`/products/${item.productId}`)}
                         >
+                          <img
+                            src={item.image || "/placeholder.png"}
+                            alt={item.productName}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "4px" }}
+                          />
+                        </Box>
+
+                        {/* Product Details */}
+                        <Box flex={1} display="flex" flexDirection="column" justifyContent="space-between">
+                          <Box>
+                            <Typography variant="h6" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                              {item.productName}
+                            </Typography>
+                            
+                            {item.variantName && (
+                              <Typography variant="caption" color="text.secondary" mt={0.5} textTransform="uppercase" fontWeight={600}>
+                                {item.variantName}
+                              </Typography>
+                            )}
+
+                            <Typography variant="body2" mt={1}>
+                              ₹{item.price.toLocaleString()}
+                            </Typography>
+                          </Box>
+                          <Button
+                            size="small"
+                            onClick={() => removeItem(item.cartItemId)}
+                            startIcon={<FaTimes size={12} />}
+                            sx={{
+                              color: COLORS.textLight,
+                              justifyContent: "flex-start",
+                              p: 0,
+                              minWidth: 0,
+                              mt: 1,
+                              "&:hover": { color: "red", bgcolor: "transparent" },
+                            }}
+                          >
+                            REMOVE
+                          </Button>
+                        </Box>
+
+                        {/* Quantity */}
+                        <Box display="flex" alignItems="center" mt={isMobile ? 2 : 0}>
                           <IconButton
                             size="small"
                             onClick={() => updateQuantity(item, item.quantity - 1)}
                             disabled={item.quantity <= 1}
+                            sx={{ borderRadius: 1, width: 32, height: 32 }}
                           >
                             <FaMinus size={10} />
                           </IconButton>
-                          <Typography sx={{ px: 2, fontWeight: 600 }}>{item.quantity}</Typography>
-                          <IconButton size="small" onClick={() => updateQuantity(item, item.quantity + 1)}>
+                          <Typography sx={{ px: 2, fontSize: "0.95rem", fontWeight: 600 }}>{item.quantity}</Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => updateQuantity(item, item.quantity + 1)}
+                            sx={{ borderRadius: 1, width: 32, height: 32 }}
+                          >
                             <FaPlus size={10} />
                           </IconButton>
                         </Box>
-                        <Typography fontWeight={800} variant="h6">
-                          ₹{(item.price * item.quantity).toLocaleString()}
-                        </Typography>
+
+                        {/* Total Price */}
+                        <Box textAlign={isMobile ? "left" : "right"} flex={1} mt={isMobile ? 2 : 0}>
+                          <Typography variant="h6" fontWeight={700}>
+                            ₹{(item.price * item.quantity).toLocaleString()}
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
-                  </Paper>
-                ))}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </Stack>
             </Grid>
 
-            {/* Right: Summary */}
-            <Grid item xs={12} md={4}>
-              <Paper
-                elevation={0}
+            {/* --- Right Column: Order Summary --- */}
+            <Grid item xs={12} lg={4}>
+              <Box
                 sx={{
-                  p: 4,
-                  borderRadius: 4,
-                  border: "1px solid #E5E7EB",
-                  position: "sticky",
+                  bgcolor: COLORS.white,
+                  p: { xs: 3, md: 5 },
+                  borderRadius: 2,
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+                  position: { lg: "sticky" },
                   top: 100,
                 }}
               >
-                <Typography variant="h6" fontWeight={700} gutterBottom>
-                  Order Summary
+                <Typography variant="h5" sx={{ fontFamily: "'Playfair Display', serif", mb: 4, fontWeight: 700 }}>
+                  ORDER SUMMARY
                 </Typography>
 
-                <Stack spacing={2} sx={{ my: 3 }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Stack spacing={2} mb={4}>
+                  <Box display="flex" justifyContent="space-between">
                     <Typography color="text.secondary">Subtotal</Typography>
                     <Typography fontWeight={600}>₹{totalPrice.toLocaleString()}</Typography>
                   </Box>
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Box display="flex" justifyContent="space-between">
                     <Typography color="text.secondary">Shipping</Typography>
-                    <Typography color="success.main" fontWeight={600}>
-                      Free
-                    </Typography>
+                    <Typography fontWeight={600} color={COLORS.gold}>Calculated at Checkout</Typography>
                   </Box>
-                  <Divider />
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography variant="h6" fontWeight={800}>
-                      Total
-                    </Typography>
-                    <Typography variant="h6" fontWeight={800}>
-                      ₹{totalPrice.toLocaleString()}
-                    </Typography>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography color="text.secondary">Tax</Typography>
+                    <Typography fontWeight={600}>₹0.00</Typography>
                   </Box>
                 </Stack>
 
+                <Divider sx={{ mb: 4 }} />
+
+                <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={4}>
+                  <Typography variant="h6">ESTIMATED TOTAL</Typography>
+                  <Typography variant="h4" sx={{ color: COLORS.black, fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                    ₹{totalPrice.toLocaleString()}
+                  </Typography>
+                </Box>
+
                 <Button
-                  variant="contained"
                   fullWidth
-                  size="large"
+                  variant="contained"
                   disabled={checkingOut}
                   onClick={() => {
                     setCheckingOut(true);
                     setTimeout(() => navigate("/checkout"), 1000);
                   }}
                   sx={{
-                    py: 2,
-                    borderRadius: 3,
-                    bgcolor: "#000",
+                    bgcolor: COLORS.black,
+                    color: COLORS.white,
+                    py: 2.5,
+                    borderRadius: 1,
+                    fontSize: "1rem",
                     fontWeight: 700,
-                    textTransform: "none",
-                    "&:hover": { bgcolor: "#222" },
+                    letterSpacing: 2,
+                    "&:hover": { bgcolor: COLORS.gold, color: COLORS.black },
                   }}
                 >
-                  {checkingOut ? <CircularProgress size={24} color="inherit" /> : "Proceed to Checkout"}
+                  {checkingOut ? <CircularProgress size={24} color="inherit" /> : "PROCEED TO CHECKOUT"}
                 </Button>
 
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  textAlign="center"
-                  display="block"
-                  sx={{ mt: 2 }}
-                >
-                  Secure Checkout Guaranteed
-                </Typography>
-              </Paper>
+                <Box mt={3} display="flex" justifyContent="center" alignItems="center" gap={1} color={COLORS.textLight}>
+                  <FaLock size={12} />
+                  <Typography variant="caption" fontWeight={600} letterSpacing={1}>
+                    SECURE ENCRYPTED CHECKOUT
+                  </Typography>
+                </Box>
+              </Box>
             </Grid>
           </Grid>
         )}

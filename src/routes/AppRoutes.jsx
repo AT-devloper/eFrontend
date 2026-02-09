@@ -11,12 +11,11 @@ import CreateProductPage from "../components/productliststeps/CreateProductPages
 import ProductListPage from "../components/product/ProductListPage";
 import MyOrders from "../pages/MyOrders";
 import OrderDetail from "../pages/OrderDetail";
-
 import Checkout from "../pages/Checkout";
-
-
 import Cart from "../pages/Cart";
-// import Wishlist from "../pages/Wishlist";
+
+// 1. Uncomment the import
+import Wishlist from "../pages/Wishlist"; 
 
 export default function AppRoutes() {
   return (
@@ -34,12 +33,14 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/auth" element={<AuthToggleCard />} />
 
-      {/* Cart & Wishlist */}
+      {/* Cart, Orders & Wishlist */}
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/my-orders" element={<MyOrders />} />
       <Route path="/my-orders/:orderNumber" element={<OrderDetail />} />
-      {/* <Route path="/wishlist" element={<Wishlist />} /> */}
+      
+      {/* 2. Uncomment the Route */}
+      <Route path="/wishlist" element={<Wishlist />} />
 
       {/* Seller pages */}
       <Route path="/productlist/createproduct" element={<CreateProductPage />} />

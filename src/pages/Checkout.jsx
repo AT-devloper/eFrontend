@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
 import { useUser } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
-import { FaTrash, FaArrowLeft, FaShieldAlt, FaCheckCircle } from "react-icons/fa";
-import { createOrder, createSubscription } from "../api/paymentApi";
+import { FaArrowLeft, FaShieldAlt, FaCheck } from "react-icons/fa";
+import { createOrder } from "../api/paymentApi";
 import {
   Box,
   Container,
@@ -12,28 +12,38 @@ import {
   Stack,
   IconButton,
   CircularProgress,
-  Paper,
   Grid,
-  Alert,
+  Divider,
   Dialog,
   DialogContent,
-  Zoom,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 
+// --- Theme Config ---
+const COLORS = {
+  gold: "#C5A059",
+  black: "#000000",
+  white: "#FFFFFF",
+  gray: "#F9F9F9",
+  textLight: "#888888",
+  border: "#EAEAEA",
+};
+
 const Checkout = () => {
-  const { cart, totalPrice, removeItem, loading, fetchCart } = useCart();
+  const { cart, totalPrice, loading, fetchCart } = useCart();
   const { user } = useUser();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
   const [processing, setProcessing] = useState(false);
-  
-  // ✅ NEW: Success Modal States
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState({ orderId: "", status: "" });
 
+  // Razorpay script
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -43,37 +53,25 @@ const Checkout = () => {
 
   const getSafeAmount = (amount) => Math.floor(amount);
 
-  // ✅ VERIFY PAYMENT + SHOW POPUP
   const verifyPayment = async (orderId) => {
     setProcessing(true);
     try {
-      const res = await fetch(
-        `http://localhost:8080/auth/payment/status/check/${orderId}`
-      );
+      const res = await fetch(`http://localhost:8080/auth/payment/status/check/${orderId}`);
       const data = await res.json();
-
       if (data.status === "PAID") {
-        setPaymentDetails({ orderId: orderId, status: "SUCCESSFUL" });
-        await fetchCart(); // Clear cart from backend/context
-        setShowSuccessPopup(true); // 🔥 Trigger the UI Popup
-      } else {
-        setStatusMessage({
-          type: "error",
-          text: "Payment verification failed. Please contact support.",
-        });
-      }
+        setPaymentDetails({ orderId, status: "SUCCESSFUL" });
+        await fetchCart();
+        setShowSuccessPopup(true);
+      } else alert("Payment verification failed.");
     } catch (err) {
-      setStatusMessage({ type: "error", text: "Verification failed." });
+      alert("Verification failed.");
     } finally {
       setProcessing(false);
     }
   };
 
   const handlePayNow = async () => {
-    if (!user) {
-      setStatusMessage({ type: "error", text: "Please log in." });
-      return;
-    }
+    if (!user) return alert("Please log in.");
     setProcessing(true);
     try {
       const safeAmount = getSafeAmount(totalPrice);
@@ -84,10 +82,10 @@ const Checkout = () => {
         amount: data.amount,
         currency: "INR",
         name: "AT_LUXE",
-        description: "Order Checkout",
+        description: "Secure Checkout",
         order_id: data.orderId,
         prefill: { name: user.name || "", email: user.email || "" },
-        theme: { color: "#4A2E2E" },
+        theme: { color: COLORS.black },
         handler: function (response) {
           verifyPayment(response.razorpay_order_id);
         },
@@ -95,129 +93,192 @@ const Checkout = () => {
       };
 
       new window.Razorpay(options).open();
-    } catch (err) {
-      setStatusMessage({ type: "error", text: "Payment initialization failed." });
+    } catch {
+      alert("Payment initialization failed.");
       setProcessing(false);
     }
   };
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-        <CircularProgress color="secondary" />
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", bgcolor: COLORS.white }}>
+        <CircularProgress sx={{ color: COLORS.gold }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ bgcolor: "#F9FAFB", minHeight: "100vh" }}>
+    <Box sx={{ bgcolor: COLORS.gray, minHeight: "100vh" }}>
       <Navbar />
-
-      <Container sx={{ py: 6, maxWidth: "lg" }}>
-        <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Typography variant="h4" fontWeight={900} sx={{ fontFamily: 'Playfair Display' }}>
-            Checkout
+      <Container maxWidth="lg" sx={{ pt: { xs: 4, md: 8 }, pb: 8 }}>
+        
+        {/* Header */}
+        <Box mb={6} display="flex" alignItems="center" gap={2}>
+          <IconButton onClick={() => navigate("/cart")} sx={{ border: `1px solid ${COLORS.border}`, borderRadius: 1 }}>
+            <FaArrowLeft size={14} />
+          </IconButton>
+          <Typography variant={isMobile ? "h4" : "h3"} sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 800 }}>
+            SECURE CHECKOUT
           </Typography>
-          <Button startIcon={<FaArrowLeft />} onClick={() => navigate("/cart")} sx={{ color: "text.secondary" }}>
-            Back to Cart
-          </Button>
         </Box>
 
-        {statusMessage.text && <Alert severity={statusMessage.type} sx={{ mb: 4, borderRadius: 3 }}>{statusMessage.text}</Alert>}
-
         <Grid container spacing={4}>
-          <Grid item xs={12} md={7}>
-            <Stack spacing={2}>
+          {/* --- Left: Order Items --- */}
+          <Grid item xs={12} lg={8}>
+            <Stack spacing={3}>
               {cart.map((item) => (
-                <Paper key={item.cartItemId} sx={{ p: 2, display: "flex", gap: 2, borderRadius: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                  <Box component="img" src={item.image || "/placeholder.png"} sx={{ width: 80, height: 80, borderRadius: 2, objectFit: 'cover' }} />
-                  <Box sx={{ flex: 1 }}>
-                    <Typography fontWeight={700}>{item.productName}</Typography>
-                    <Typography variant="body2" color="text.secondary">Qty: {item.quantity}</Typography>
-                    <Typography fontWeight={800} color="primary.main">₹{(item.price * item.quantity).toLocaleString()}</Typography>
+                <Box
+                  key={item.cartItemId}
+                  display="flex"
+                  flexDirection={isMobile ? "column" : "row"}
+                  gap={3}
+                  p={3}
+                  bgcolor={COLORS.white}
+                  borderRadius={2}
+                  boxShadow="0 6px 18px rgba(0,0,0,0.05)"
+                  sx={{ "&:hover": { boxShadow: "0 10px 25px rgba(0,0,0,0.1)" } }}
+                  alignItems="center"
+                >
+                  <Box sx={{ width: 140, height: 160, cursor: "pointer", flexShrink: 0 }}>
+                    <img
+                      src={item.image || "/placeholder.png"}
+                      alt={item.productName}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 4 }}
+                    />
                   </Box>
-                  <IconButton onClick={() => removeItem(item.cartItemId)} color="error"><FaTrash size={16} /></IconButton>
-                </Paper>
+
+                  <Box flex={1} display="flex" justifyContent="space-between" flexDirection={isMobile ? "column" : "row"}>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                        {item.productName}
+                      </Typography>
+                      {item.variantName && (
+                        <Typography variant="caption" color="text.secondary" mt={0.5} textTransform="uppercase" fontWeight={600}>
+                          {item.variantName}
+                        </Typography>
+                      )}
+                      <Typography variant="body2" color="text.secondary" mt={1}>
+                        Qty: {item.quantity}
+                      </Typography>
+                    </Box>
+                    <Typography variant="h6" fontWeight={700} mt={isMobile ? 2 : 0}>
+                      ₹{(item.price * item.quantity).toLocaleString()}
+                    </Typography>
+                  </Box>
+                </Box>
               ))}
             </Stack>
           </Grid>
 
-          <Grid item xs={12} md={5}>
-            <Paper sx={{ p: 4, borderRadius: 4, position: 'sticky', top: 100 }}>
-              <Typography variant="h6" fontWeight={800} mb={3}>Payment Summary</Typography>
-              <Box sx={{ my: 3, display: "flex", justifyContent: "space-between" }}>
-                <Typography color="text.secondary">Order Total</Typography>
-                <Typography fontWeight={900} variant="h6">₹{totalPrice.toLocaleString()}</Typography>
-              </Box>
+          {/* --- Right: Payment Summary --- */}
+          <Grid item xs={12} lg={4}>
+            <Box
+              sx={{
+                bgcolor: COLORS.white,
+                p: { xs: 3, md: 5 },
+                borderRadius: 2,
+                boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+                position: { lg: "sticky" },
+                top: 100,
+              }}
+            >
+              <Typography variant="h5" sx={{ fontFamily: "'Playfair Display', serif", mb: 4, fontWeight: 700 }}>
+                PAYMENT SUMMARY
+              </Typography>
 
-              <Stack spacing={2}>
-                <Button 
-                  variant="contained" 
-                  fullWidth 
-                  disabled={processing || cart.length === 0} 
-                  onClick={handlePayNow}
-                  sx={{ py: 2, borderRadius: 50, fontWeight: 800, bgcolor: "#4A2E2E", color: "#D8B67B", "&:hover": { bgcolor: "#3d2626" } }}
-                >
-                  {processing ? <CircularProgress size={24} color="inherit" /> : "Confirm & Pay"}
-                </Button>
+              <Stack spacing={2} mb={4}>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography color="text.secondary">Order Value</Typography>
+                  <Typography fontWeight={600}>₹{totalPrice.toLocaleString()}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography color="text.secondary">Shipping</Typography>
+                  <Typography fontWeight={600} color={COLORS.gold}>Free</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography color="text.secondary">Tax (Included)</Typography>
+                  <Typography fontWeight={600}>₹0.00</Typography>
+                </Box>
               </Stack>
 
-              <Box sx={{ mt: 3, textAlign: "center", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                <FaShieldAlt color="#10B981" />
-                <Typography variant="caption" fontWeight={600} color="text.secondary">
-                  100% Secure SSL Encrypted Payment
+              <Divider sx={{ mb: 4 }} />
+
+              <Box display="flex" justifyContent="space-between" alignItems="baseline" mb={4}>
+                <Typography variant="h6">TOTAL TO PAY</Typography>
+                <Typography variant="h4" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 700 }}>
+                  ₹{totalPrice.toLocaleString()}
                 </Typography>
               </Box>
-            </Paper>
+
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                disabled={processing}
+                onClick={handlePayNow}
+                sx={{
+                  bgcolor: COLORS.black,
+                  color: COLORS.white,
+                  py: 2.5,
+                  borderRadius: 1,
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  letterSpacing: 2,
+                  "&:hover": { bgcolor: COLORS.gold, color: COLORS.white },
+                }}
+              >
+                {processing ? <CircularProgress size={24} color="inherit" /> : "PAY SECURELY"}
+              </Button>
+
+              <Box mt={4} textAlign="center">
+                <Box display="flex" justifyContent="center" alignItems="center" gap={1} color={COLORS.textLight} mb={1}>
+                  <FaShieldAlt size={12} />
+                  <Typography variant="caption" fontWeight={600} letterSpacing={1}>SSL ENCRYPTED PAYMENT</Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Your personal data will be used to process your order and for other purposes described in our privacy policy.
+                </Typography>
+              </Box>
+            </Box>
           </Grid>
         </Grid>
       </Container>
 
-      {/* --- SUCCESS POPUP MODAL --- */}
-      <Dialog 
-        open={showSuccessPopup} 
-        TransitionComponent={Zoom} 
-        PaperProps={{ sx: { borderRadius: 5, p: 3, textAlign: "center", maxWidth: 450 } }}
+      {/* --- Success Popup --- */}
+      <Dialog
+        open={showSuccessPopup}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 2, p: 4, border: `1px solid ${COLORS.black}`, boxShadow: "0 20px 50px rgba(0,0,0,0.1)" } }}
       >
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-            <FaCheckCircle size={70} color="#10B981" />
-            
-            <Typography variant="h4" fontWeight={900} sx={{ fontFamily: 'Playfair Display' }}>
-              Order Confirmed!
-            </Typography>
-            
-            <Typography variant="body1" color="text.secondary">
-              Thank you for shopping with AT_LUXE. Your payment was processed successfully.
-            </Typography>
-
-            <Paper variant="outlined" sx={{ width: '100%', p: 2, bgcolor: "#F8F9FA", borderRadius: 3, borderStyle: 'dashed' }}>
-              <Stack spacing={1}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="caption" fontWeight={700} color="text.secondary">PAYMENT ID</Typography>
-                  <Typography variant="caption" fontWeight={800}>{paymentDetails.orderId}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="caption" fontWeight={700} color="text.secondary">STATUS</Typography>
-                  <Typography variant="caption" fontWeight={900} color="#10B981">{paymentDetails.status}</Typography>
-                </Box>
-              </Stack>
-            </Paper>
-
-            <Button 
-              variant="contained" 
-              fullWidth 
-              size="large"
-              onClick={() => navigate("/my-orders")}
-              sx={{ 
-                mt: 2, py: 1.5, borderRadius: 50, fontWeight: 800, 
-                bgcolor: "#4A2E2E", color: "#D8B67B",
-                "&:hover": { bgcolor: "#3d2626" } 
-              }}
-            >
-              View My Orders
-            </Button>
+        <DialogContent sx={{ textAlign: "center", py: 4 }}>
+          <Box sx={{ width: 80, height: 80, border: `2px solid ${COLORS.gold}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 3 }}>
+            <FaCheck size={30} color={COLORS.gold} />
           </Box>
+          <Typography variant="h4" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, mb: 1 }}>
+            ORDER CONFIRMED
+          </Typography>
+          <Typography color="text.secondary" mb={4}>
+            Thank you for shopping with AT-LUXE. Your order has been successfully placed.
+          </Typography>
+          <Box bgcolor={COLORS.gray} p={3} mb={4} border={`1px dashed ${COLORS.border}`} borderRadius={1}>
+            <Stack direction="row" justifyContent="space-between" mb={1}>
+              <Typography variant="caption" fontWeight={700} color="text.secondary">ORDER ID</Typography>
+              <Typography variant="caption" fontWeight={700}>{paymentDetails.orderId}</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" fontWeight={700} color="text.secondary">STATUS</Typography>
+              <Typography variant="caption" fontWeight={700} color={COLORS.gold}>PAID</Typography>
+            </Stack>
+          </Box>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => navigate("/my-orders")}
+            sx={{ bgcolor: COLORS.black, color: COLORS.white, borderRadius: 1, py: 1.5, fontWeight: 700, letterSpacing: 1, "&:hover": { bgcolor: COLORS.gold } }}
+          >
+            VIEW MY ORDERS
+          </Button>
         </DialogContent>
       </Dialog>
 

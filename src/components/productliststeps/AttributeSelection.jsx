@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { 
-  Box, 
-  Typography, 
-  Chip, 
-  Button, 
-  Paper, 
-  Divider, 
-  Stack,
-  IconButton,
-  Tooltip
+  Box, Typography, Chip, Button, Paper, Stack,
+  IconButton, Tooltip
 } from "@mui/material";
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -32,14 +25,17 @@ const AttributeSelection = ({ state, dispatch }) => {
     fetchAttributes();
   }, []);
 
-  // Sync merged attributes to global state
+  // Sync merged attributeSets to global attributes
   useEffect(() => {
     if (state.attributeSets?.length > 0) {
       const mergedAttrs = {};
       state.attributeSets.forEach((set) => {
         Object.entries(set).forEach(([attrId, valIds]) => {
           mergedAttrs[attrId] = Array.from(
-            new Set([...(mergedAttrs[attrId] || []), ...valIds])
+            new Set([
+              ...(mergedAttrs[attrId] || []),
+              ...valIds.map((v) => (typeof v === "object" ? Number(v.id) : Number(v)))
+            ])
           );
         });
       });
@@ -61,7 +57,7 @@ const AttributeSelection = ({ state, dispatch }) => {
 
   const addAttributeSet = () => {
     const hasSelection = Object.values(currentSelection).some((arr) => arr.length > 0);
-    if (!hasSelection) return; // Silent return for testing
+    if (!hasSelection) return;
 
     const updatedSets = [...(state.attributeSets || []), currentSelection];
     dispatch({ attributeSets: updatedSets });
@@ -122,8 +118,7 @@ const AttributeSelection = ({ state, dispatch }) => {
           startIcon={<AddIcon />}
           onClick={addAttributeSet}
           sx={{ 
-            mt: 2, 
-            py: 1.5, 
+            mt: 2, py: 1.5, 
             background: "linear-gradient(135deg, #D8B67B, #B5945B)",
             color: 'primary.main',
             fontWeight: 700
@@ -144,15 +139,8 @@ const AttributeSelection = ({ state, dispatch }) => {
               <Paper 
                 key={idx} 
                 elevation={0}
-                sx={{ 
-                  p: 2, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 2,
-                  bgcolor: '#fafafa'
-                }}
+                sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      border: '1px solid #e0e0e0', borderRadius: 2, bgcolor: '#fafafa' }}
               >
                 <Box>
                   {Object.entries(set).map(([attrId, valIds], sIdx) => (
