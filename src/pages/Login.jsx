@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { jwtDecode } from "jwt-decode"; 
 
 const Login = ({ switchToRegister, switchToForgot, onSuccess }) => {
   const { setUser } = useUser();
@@ -29,28 +30,36 @@ const Login = ({ switchToRegister, switchToForgot, onSuccess }) => {
   const redirectTo = searchParams.get("redirect") || "/";
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage("");
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setMessage("");
 
-    try {
-      const response = await authController.login(form);
-      const { token, user } = response;
+  try {
+    const response = await authController.login(form);
+    const { token, user } = response;
 
-      if (!token || !user) throw new Error("Invalid response from server");
+    if (!token || !user) throw new Error("Invalid response from server");
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      setUser(user);
-      
-      if (onSuccess) onSuccess(); else navigate(redirectTo);
-    } catch (err) {
-      setMessage(err.response?.data?.message || "Login failed. Check credentials.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 1️⃣ Store token and user
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    setUser(user);
+
+    // 2️⃣ Decode JWT to get roles
+    const decoded = jwtDecode(token);
+    const roles = decoded.roles || [];
+    localStorage.setItem("roles", JSON.stringify(roles)); // ✅ key step
+
+    if (onSuccess) onSuccess(); 
+    else navigate(redirectTo);
+  } catch (err) {
+    setMessage(err.response?.data?.message || "Login failed. Check credentials.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     if (window.google) {

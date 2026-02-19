@@ -81,7 +81,7 @@ const Cart = () => {
 
         {cart.length === 0 ? (
           <Box textAlign="center" py={15} borderRadius={2} border={`1px dashed ${COLORS.border}`} bgcolor={COLORS.white}>
-            <Typography variant="h4" sx={{ fontFamily: "'Playfair Display', serif", mb: 2 }}>Your bag is empty.</Typography>
+            <Typography variant="h4" sx={{ fontFamily: "'Playfair Display', serif", mb: 2 }}>Your Cart is empty.</Typography>
             <Typography color="text.secondary" mb={4}>Discover our new collection.</Typography>
             <Button
               variant="contained"

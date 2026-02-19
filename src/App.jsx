@@ -5,8 +5,11 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CartProvider } from "./context/CartContext";
 import { UserProvider } from "./context/UserContext";
-import { WishlistProvider } from "./context/WishlistContext"; // 1. IMPORT THIS
+import { WishlistProvider } from "./context/WishlistContext";
 import GlobalLoader from "./GlobalLoader";
+
+// 1. IMPORT THE GLOBAL BUTTON
+import GlobalBackToTop from "./layouts/GlobalBackToTop";
 
 function App() {
   return (
@@ -14,13 +17,15 @@ function App() {
       <CssBaseline />
       <UserProvider>
         <CartProvider>
-          {/* 2. WRAP WITH WISHLIST PROVIDER */}
           <WishlistProvider>
             
             {/* Wrap AppRoutes with the GlobalLoader */}
             <GlobalLoader>
               <AppRoutes />
             </GlobalLoader>
+
+            {/* 2. ADD THE BUTTON HERE (So it appears on all pages) */}
+            <GlobalBackToTop />
 
             <ToastContainer
               position="top-right"

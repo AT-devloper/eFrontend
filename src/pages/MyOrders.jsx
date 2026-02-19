@@ -32,16 +32,92 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import sellerApi from "../api/sellerApi";
+import orderApi from "../api/orderApi";
+
 
 // --- Configuration ---
 const STATUS_CONFIG = {
-  CONFIRMED: { label: "Confirmed", color: "#475569", bg: "#f1f5f9", icon: <Inventory2Outlined sx={{ fontSize: 14 }} /> },
-  PACKED: { label: "Packed", color: "#334155", bg: "#e2e8f0", icon: <Inventory2Outlined sx={{ fontSize: 14 }} /> },
-  SHIPPED: { label: "In Transit", color: "#0284c7", bg: "#e0f2fe", icon: <LocalShippingOutlined sx={{ fontSize: 14 }} /> },
-  DELIVERED: { label: "Delivered", color: "#059669", bg: "#dcfce7", icon: <CheckCircleOutline sx={{ fontSize: 14 }} /> },
-  CANCELLED: { label: "Cancelled", color: "#dc2626", bg: "#fee2e2", icon: <CancelOutlined sx={{ fontSize: 14 }} /> },
-  RETURN_REQUESTED: { label: "Return", color: "#db2777", bg: "#fce7f3", icon: <ReplayOutlined sx={{ fontSize: 14 }} /> },
+  // ===== NORMAL ORDER FLOW =====
+  ORDERED: {
+    label: "Ordered",
+    color: "#64748b",
+    bg: "#f1f5f9",
+    icon: <Inventory2Outlined sx={{ fontSize: 14 }} />,
+  },
+
+  CONFIRMED: {
+    label: "Confirmed",
+    color: "#475569",
+    bg: "#f1f5f9",
+    icon: <Inventory2Outlined sx={{ fontSize: 14 }} />,
+  },
+
+  PACKED: {
+    label: "Packed",
+    color: "#334155",
+    bg: "#e2e8f0",
+    icon: <Inventory2Outlined sx={{ fontSize: 14 }} />,
+  },
+
+  SHIPPED: {
+    label: "In Transit",
+    color: "#0284c7",
+    bg: "#e0f2fe",
+    icon: <LocalShippingOutlined sx={{ fontSize: 14 }} />,
+  },
+
+  OUT_FOR_DELIVERY: {
+  label: "Out for Delivery",
+  color: "#d97706",        // amber-600
+  bg: "#fef3c7",           // amber-100
+  icon: <LocalShippingOutlined sx={{ fontSize: 14 }} />,
+  },
+
+  DELIVERED: {
+    label: "Delivered",
+    color: "#059669",
+    bg: "#dcfce7",
+    icon: <CheckCircleOutline sx={{ fontSize: 14 }} />,
+  },
+
+  // ===== CANCELLED =====
+  CANCELLED: {
+    label: "Cancelled",
+    color: "#dc2626",
+    bg: "#fee2e2",
+    icon: <CancelOutlined sx={{ fontSize: 14 }} />,
+  },
+
+  // ===== RETURN FLOW =====
+  RETURN_REQUESTED: {
+    label: "Return Requested",
+    color: "#db2777",
+    bg: "#fce7f3",
+    icon: <ReplayOutlined sx={{ fontSize: 14 }} />,
+  },
+
+  RETURN_APPROVED: {
+    label: "Return Approved",
+    color: "#9333ea",
+    bg: "#f3e8ff",
+    icon: <ReplayOutlined sx={{ fontSize: 14 }} />,
+  },
+
+  RETURN_PICKED: {
+    label: "Return Picked",
+    color: "#ea580c",
+    bg: "#ffedd5",
+    icon: <LocalShippingOutlined sx={{ fontSize: 14 }} />,
+  },
+
+  RETURN_COMPLETED: {
+    label: "Return Completed",
+    color: "#059669",
+    bg: "#dcfce7",
+    icon: <CheckCircleOutline sx={{ fontSize: 14 }} />,
+  },
 };
+
 
 const formatCurrency = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -194,33 +270,58 @@ const MyOrders = () => {
   const [sortOrder, setSortOrder] = useState("desc");
 
   // Fetch Logic
-  const fetchOrders = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`http://localhost:8080/auth/orders/user/${user.id}`);
-      const data = await res.json();
-      
-      const uniqueProductIds = new Set();
-      data.forEach(order => order.items.forEach(item => uniqueProductIds.add(item.productId)));
-      
-      const imageMap = new Map();
-      await Promise.all(Array.from(uniqueProductIds).map(async (pid) => {
-          try {
-            const imgs = await sellerApi.getProductImages(pid);
-            imageMap.set(pid, imgs[0]?.imageUrl || "");
-          } catch { imageMap.set(pid, ""); }
-      }));
+const fetchOrders = useCallback(async () => {
+  if (!user?.id) return;
 
-      const processed = data.map(({ order, items }) => ({
-        order,
-        items: items.map(item => ({ ...item, image: imageMap.get(item.productId) || "" }))
-      }));
+  setLoading(true);
 
-      setOrders(processed);
-    } catch (err) { console.error(err); } 
-    finally { setLoading(false); }
-  }, [user]);
+  try {
+    const data = await orderApi.getUserOrders(user.id);
+
+    if (!Array.isArray(data)) {
+      setOrders([]);
+      return;
+    }
+
+    const uniqueProductIds = new Set();
+    data.forEach((orderBlock) => {
+      orderBlock?.items?.forEach((item) => {
+        if (item?.productId) {
+          uniqueProductIds.add(item.productId);
+        }
+      });
+    });
+
+    const imageMap = new Map();
+
+    await Promise.all(
+      Array.from(uniqueProductIds).map(async (pid) => {
+        try {
+          const imgs = await sellerApi.getProductImages(pid);
+          imageMap.set(pid, imgs?.[0]?.imageUrl || "");
+        } catch {
+          imageMap.set(pid, "");
+        }
+      })
+    );
+
+    const processed = data.map((block) => ({
+      order: block?.order || {},
+      items: (block?.items || []).map((item) => ({
+        ...item,
+        image: imageMap.get(item.productId) || "",
+      })),
+    }));
+
+    setOrders(processed);
+  } catch (err) {
+    console.error("Failed to fetch orders:", err);
+    setOrders([]);
+  } finally {
+    setLoading(false);
+  }
+}, [user]);
+
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
@@ -302,12 +403,7 @@ const MyOrders = () => {
         )}
       </Container>
       
-      {/* Scroll Top Button */}
-      <ScrollTop>
-        <Fab size="medium" sx={{ bgcolor: "#0f172a", color: "white", "&:hover": { bgcolor: "#334155" } }}>
-          <KeyboardArrowUp />
-        </Fab>
-      </ScrollTop>
+ 
 
       <Footer />
     </Box>

@@ -21,7 +21,7 @@ export const authController = {
     return res.data;
   },
 
-  async googleLogin(idToken) {
+googleLogin: async (idToken) => {
     const res = await authService.googleLogin(idToken);
     return res.data;
   },

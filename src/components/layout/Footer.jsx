@@ -163,8 +163,8 @@ export default function Footer() {
             © {currentYear} AT-LUXE. ESTABLISHED IN INDIA.
           </Typography>
           <Stack direction="row" spacing={3}>
-             <Typography variant="caption" sx={{ opacity: 0.5 }}>GLOBAL DELIVERY</Typography>
-             <Typography variant="caption" sx={{ opacity: 0.5 }}>SECURE PAYMENT</Typography>
+             <Typography variant="caption" sx={{ opacity: 0.5 }}>ALL INDIA DELIVERY</Typography>
+             <Typography variant="caption" sx={{ opacity: 0.5 }}>PAYMENT SECURED BY REZORPAY</Typography>
           </Stack>
         </Stack>
       </Container>

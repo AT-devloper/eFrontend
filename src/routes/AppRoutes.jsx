@@ -13,9 +13,19 @@ import MyOrders from "../pages/MyOrders";
 import OrderDetail from "../pages/OrderDetail";
 import Checkout from "../pages/Checkout";
 import Cart from "../pages/Cart";
+import Wishlist from "../pages/Wishlist";
 
-// 1. Uncomment the import
-import Wishlist from "../pages/Wishlist"; 
+// Admin Components
+import AdminOrdersDashboard from "../admin/AdminOrdersDashboard";
+import RbacPermissionPage from "../admin/RbacPermissionPage";
+import AdminLayout from "../components/layout/AdminLayout";
+import Roles from "../admin/Roles";
+import AssignRole from "../admin/AssignRole";
+import Permissions from "../admin/Permissions";
+
+// NEW: Import the Welcome Component (or it's handled inside AdminLayout index)
+// If you didn't create a separate file, the AdminLayout "isDefaultPage" logic 
+// we wrote earlier will handle the "/" path automatically.
 
 export default function AppRoutes() {
   return (
@@ -23,7 +33,7 @@ export default function AppRoutes() {
       {/* Redirect default "/" to "/home" */}
       <Route path="/" element={<Navigate to="/home" />} />
 
-      {/* Public pages */}
+      {/* Public Pages */}
       <Route path="/home" element={<Home />} />
       <Route path="/products" element={<Products />} />
       <Route path="/products/:productId" element={<ProductDetailsPage />} />
@@ -33,20 +43,33 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/auth" element={<AuthToggleCard />} />
 
-      {/* Cart, Orders & Wishlist */}
+      {/* User Pages */}
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
       <Route path="/my-orders" element={<MyOrders />} />
       <Route path="/my-orders/:orderNumber" element={<OrderDetail />} />
-      
-      {/* 2. Uncomment the Route */}
       <Route path="/wishlist" element={<Wishlist />} />
 
-      {/* Seller pages */}
-      <Route path="/productlist/createproduct" element={<CreateProductPage />} />
+      {/* Seller Pages (Standalone) */}
       <Route path="/product/products" element={<ProductListPage />} />
 
-      {/* Catch all - redirect unknown paths to home */}
+      {/* --- ADMIN PANEL GROUP --- */}
+      <Route path="/admin" element={<AdminLayout />}>
+        {/* LEAVE THIS EMPTY or use <Route index element={<div />} /> 
+           Because the AdminLayout we built checks if location.pathname === "/admin"
+           to show the Branding/Animated Logo.
+        */}
+        <Route index element={null} /> 
+
+        <Route path="orders" element={<AdminOrdersDashboard/>} />
+        <Route path="sellerpannel" element={<CreateProductPage />}/>
+        <Route path="rbac/permissions" element={<RbacPermissionPage />}/>
+        <Route path="create/permissions" element={<Permissions />} />
+        <Route path="create/roles" element={<Roles />} />
+        <Route path="assign-role" element={<AssignRole />} />
+      </Route>
+
+      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/home" />} />
     </Routes>
   );

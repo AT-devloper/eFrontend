@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 import { motion } from "framer-motion";
 
-// Helper for icons (Optional: You can use actual jewelry icons here)
 import DiamondIcon from '@mui/icons-material/Diamond';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
@@ -18,12 +17,13 @@ const CategoryStep = ({ state, dispatch }) => {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    // Simulated fetch
+    // Simulated fetch (UPDATED - Added Chain)
     setCategories([
       { id: 1, name: "Rings", icon: <DiamondIcon /> },
       { id: 2, name: "Necklaces", icon: <AutoAwesomeIcon /> },
       { id: 3, name: "Bracelets", icon: <DiamondIcon /> },
       { id: 4, name: "Earrings", icon: <AutoAwesomeIcon /> },
+      { id: 5, name: "Chain", icon: <DiamondIcon /> }, // ✅ NEW CATEGORY
     ]);
   }, []);
 
@@ -48,7 +48,7 @@ const CategoryStep = ({ state, dispatch }) => {
                 <Card
                   sx={{
                     border: state.categoryId === cat.id 
-                      ? `2px solid #D8B67B` // Highlight with your Gold secondary
+                      ? `2px solid #D8B67B`
                       : "2px solid transparent",
                     boxShadow: state.categoryId === cat.id 
                       ? "0 12px 24px rgba(216,182,123,0.3)" 
@@ -61,17 +61,22 @@ const CategoryStep = ({ state, dispatch }) => {
                   >
                     <CardContent>
                       <Box sx={{ 
-                        color: state.categoryId === cat.id ? "secondary.main" : "primary.main",
+                        color: state.categoryId === cat.id 
+                          ? "secondary.main" 
+                          : "primary.main",
                         mb: 1,
                         fontSize: '2rem'
                       }}>
                         {cat.icon}
                       </Box>
+
                       <Typography 
                         variant="body1" 
                         sx={{ 
                           fontWeight: state.categoryId === cat.id ? 700 : 500,
-                          color: state.categoryId === cat.id ? "secondary.dark" : "text.primary"
+                          color: state.categoryId === cat.id 
+                            ? "secondary.dark" 
+                            : "text.primary"
                         }}
                       >
                         {cat.name}

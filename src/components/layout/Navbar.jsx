@@ -15,13 +15,15 @@ import {
   Close as CloseIcon,
   LocalShipping as OrdersIcon,
   Login as LoginIcon,
-  Menu as MenuIcon 
+  Menu as MenuIcon,
+  AdminPanelSettings as AdminIcon,
+  Dashboard as SellerIcon 
 } from "@mui/icons-material";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react"; // Updated for latest motion
 import { useUser } from "../../context/UserContext";
 import { useCart } from "../../context/CartContext";
-import { useWishlist } from "../../context/WishlistContext"; // <--- 1. IMPORT ADDED
+import { useWishlist } from "../../context/WishlistContext";
 
 import Login from "../../pages/Login";
 import Register from "../../pages/Register";
@@ -30,10 +32,7 @@ import ForgotPassword from "../../components/auth/ForgotPassword";
 export default function Navbar() {
   const { user, logout } = useUser();
   const { cart } = useCart();
-  
-  // <--- 2. GET REAL WISHLIST DATA --->
   const { wishlist } = useWishlist(); 
-  
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -45,19 +44,61 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // <--- 3. CALCULATE REAL COUNT --->
-  const wishlistCount = wishlist?.length || 0;
-
+  // Scroll listener
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // --- LOGIC FOR INSTANT UI UPDATES ---
+  // We use useMemo but ensure 'user' and 'user.roles' are deep dependencies
+  const { navLinks, drawerLinks, displayName, shortName } = useMemo(() => {
+    const role = user?.roles?.[0];
+    const name = user?.username || user?.name || user?.email?.split('@')[0] || "Guest";
+    
+    let panelLink = null;
+    if (role === "SUPER_ADMIN" || role === "ADMIN") {
+      panelLink = { label: "Admin Panel", path: "/admin", icon: <AdminIcon />, text: "Admin Panel" };
+    } else if (role === "SELLER") {
+      panelLink = { label: "Seller Panel", path: "/seller", icon: <SellerIcon />, text: "Seller Panel" };
+    }
+
+    const nLinks = [
+      { label: "Home", path: "/" },
+      { label: "Collections", path: "/products" },
+    ];
+    // if (panelLink) nLinks.push({ label: panelLink.label, path: panelLink.path });
+    if (user) {
+      nLinks.push({ label: "My Orders", path: "/my-orders" });
+      nLinks.push({ label: "Cart", path: "/cart", isCart: true });
+    }
+
+    const dLinks = [
+      { text: "Home", icon: <HomeIcon />, path: "/" },
+      { text: "Shop Collections", icon: <StoreIcon />, path: "/products" },
+    ];
+    if (panelLink) dLinks.push({ text: panelLink.text, icon: panelLink.icon, path: panelLink.path });
+    if (user) {
+      dLinks.push({ text: "My Orders", icon: <OrdersIcon />, path: "/my-orders" });
+      dLinks.push({ text: "My Favorites", icon: <FavoriteIcon />, path: "/wishlist" });
+    }
+    dLinks.push({ text: "Shopping Cart", icon: <ShoppingCartIcon />, path: "/cart" });
+
+    return { 
+      navLinks: nLinks, 
+      drawerLinks: dLinks, 
+      displayName: name, 
+      shortName: name.split(' ')[0] 
+    };
+  }, [user, user?.roles]); // Listening specifically to roles array change
+
   const handleLogoutAction = () => {
     logout();
     setDrawerOpen(false);
-    if (["/my-orders", "/cart", "/wishlist"].includes(location.pathname)) navigate("/");
+    if (["/my-orders", "/cart", "/wishlist", "/admin", "/seller"].includes(location.pathname)) {
+      navigate("/");
+    }
   };
 
   const handleOpenAuth = () => { setDirection(0); setActiveTab("login"); setOpenAuth(true); };
@@ -67,9 +108,8 @@ export default function Navbar() {
   const switchToRegister = () => { setDirection(1); setActiveTab("register"); };
   const switchToForgot = () => { setDirection(1); setActiveTab("forgot"); };
 
-  const cartCount = useMemo(() => cart?.reduce((acc, item) => acc + item.quantity, 0) || 0, [cart]);
-  const displayName = useMemo(() => user?.username || user?.name || user?.email?.split('@')[0] || "Guest", [user]);
-  const shortName = displayName.split(' ')[0];
+  const cartCount = cart?.reduce((acc, item) => acc + item.quantity, 0) || 0;
+  const wishlistCount = wishlist?.length || 0;
 
   const formVariants = {
     enter: (dir) => ({ x: dir > 0 ? 50 : -50, opacity: 0 }),
@@ -77,26 +117,8 @@ export default function Navbar() {
     exit: (dir) => ({ x: dir < 0 ? 50 : -50, opacity: 0 }),
   };
 
-  const navLinks = [
-    { label: "Home", path: "/" },
-    { label: "Collections", path: "/products" },
-    ...(user ? [
-      { label: "My Orders", path: "/my-orders" },
-      { label: "Cart", path: "/cart", isCart: true }
-    ] : []),
-  ];
-
-  const drawerLinks = [
-    { text: "Home", icon: <HomeIcon />, path: "/" },
-    { text: "Shop Collections", icon: <StoreIcon />, path: "/products" },
-    ...(user ? [{ text: "My Orders", icon: <OrdersIcon />, path: "/my-orders" }] : []),
-    // Show wishlist only if user is logged in
-    ...(user ? [{ text: "My Favorites", icon: <FavoriteIcon />, path: "/wishlist" }] : []),
-    { text: "Shopping Cart", icon: <ShoppingCartIcon />, path: "/cart" },
-  ];
-
   return (
-    <>
+    <Box key={user?.id || 'guest'}> {/* Force re-render on user change */}
       <Box sx={{
         position: "fixed", top: isScrolled ? 15 : 0, left: 0, right: 0,
         zIndex: 1100, display: "flex", justifyContent: "center",
@@ -147,18 +169,12 @@ export default function Navbar() {
               )}
 
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <IconButton component={motion.button} whileHover={{ rotate: 15 }} sx={{ color: isScrolled ? "secondary.main" : "primary.main" }}>
+                <IconButton sx={{ color: isScrolled ? "secondary.main" : "primary.main" }}>
                   <SearchIcon />
                 </IconButton>
 
-                {/* --- WISHLIST ICON (Desktop Only, Only if Logged In) --- */}
                 {!isMobile && user && (
-                  <IconButton 
-                    onClick={() => navigate("/wishlist")}
-                    component={motion.button} 
-                    whileHover={{ scale: 1.1 }} 
-                    sx={{ color: isScrolled ? "secondary.main" : "primary.main" }}
-                  >
+                  <IconButton onClick={() => navigate("/wishlist")} sx={{ color: isScrolled ? "secondary.main" : "primary.main" }}>
                     <Badge badgeContent={wishlistCount} color="secondary" showZero={false}>
                       <FavoriteIcon />
                     </Badge>
@@ -169,44 +185,34 @@ export default function Navbar() {
                   !isMobile ? (
                     <Button
                       onClick={handleOpenAuth}
-                      component={motion.button}
-                      whileHover={{ scale: 1.05 }}
                       variant="outlined" startIcon={<LoginIcon />}
                       sx={{ borderRadius: "50px", fontWeight: 800, color: isScrolled ? "secondary.main" : "primary.main", borderColor: isScrolled ? "secondary.main" : "primary.main" }}
                     >
                       Login
                     </Button>
                   ) : (
-                    <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: isScrolled ? "secondary.main" : "primary.main", ml: 1 }}>
+                    <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: isScrolled ? "secondary.main" : "primary.main" }}>
                       <MenuIcon />
                     </IconButton>
                   )
                 ) : (
-                  isMobile ? (
-                    <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: isScrolled ? "secondary.main" : "primary.main", ml: 1 }}>
-                      <MenuIcon />
-                    </IconButton>
-                  ) : (
-                    <Box
-                      onClick={() => setDrawerOpen(true)}
-                      component={motion.div}
-                      whileHover={{ x: 5 }}
-                      sx={{
-                        display: "flex", alignItems: "center", gap: 1.5, cursor: "pointer", ml: 1, pl: 0.6, pr: 2, py: 0.6,
-                        borderRadius: "50px", border: "1px solid",
-                        borderColor: isScrolled ? "rgba(216,182,123,0.3)" : "rgba(74,46,46,0.1)",
-                        transition: "all 0.3s", "&:hover": { bgcolor: "rgba(216,182,123,0.1)" }
-                      }}
-                    >
-                      <Avatar src={user?.avatar} sx={{ width: 34, height: 34, bgcolor: "secondary.main", color: "primary.main" }}>
-                        {displayName[0].toUpperCase()}
-                      </Avatar>
-                      <Box sx={{ textAlign: 'left' }}>
-                        <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 800, color: isScrolled ? "secondary.light" : "primary.light", display: 'block', lineHeight: 1.2 }}>PROFILE</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 800, color: isScrolled ? "white" : "primary.main", lineHeight: 1 }}>{shortName}</Typography>
-                      </Box>
+                  <Box
+                    onClick={() => setDrawerOpen(true)}
+                    sx={{
+                      display: "flex", alignItems: "center", gap: 1.5, cursor: "pointer", ml: 1, pl: 0.6, pr: 2, py: 0.6,
+                      borderRadius: "50px", border: "1px solid",
+                      borderColor: isScrolled ? "rgba(216,182,123,0.3)" : "rgba(74,46,46,0.1)",
+                      transition: "all 0.3s", "&:hover": { bgcolor: "rgba(216,182,123,0.1)" }
+                    }}
+                  >
+                    <Avatar src={user?.avatar} sx={{ width: 34, height: 34, bgcolor: "secondary.main", color: "primary.main" }}>
+                      {displayName[0]?.toUpperCase()}
+                    </Avatar>
+                    <Box sx={{ textAlign: 'left' }}>
+                      <Typography variant="caption" sx={{ fontSize: '0.6rem', fontWeight: 800, color: isScrolled ? "secondary.light" : "primary.light", display: 'block', lineHeight: 1.2 }}>PROFILE</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: isScrolled ? "white" : "primary.main", lineHeight: 1 }}>{shortName}</Typography>
                     </Box>
-                  )
+                  </Box>
                 )}
               </Box>
             </Toolbar>
@@ -214,9 +220,9 @@ export default function Navbar() {
         </AppBar>
       </Box>
 
-      {/* --- ANIMATED AUTH MODAL --- */}
+      {/* --- AUTH MODAL --- */}
       <Dialog open={openAuth} onClose={handleCloseAuth} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 6, overflow: 'hidden' } }}>
-        <Card component={motion.div} layout sx={{ p: 3, position: "relative" }}>
+        <Card sx={{ p: 3, position: "relative" }}>
           <IconButton onClick={handleCloseAuth} sx={{ position: "absolute", right: 12, top: 12 }}><CloseIcon /></IconButton>
           
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 2 }}>
@@ -226,42 +232,36 @@ export default function Navbar() {
 
           {(activeTab === "login" || activeTab === "register") && (
             <Box sx={{ display: "flex", position: 'relative', bgcolor: "rgba(0,0,0,0.05)", borderRadius: 50, p: 0.5, mb: 3 }}>
-               <Box
+              <Box
                 component={motion.div}
-                layoutId="bubble"
-                animate={{ x: activeTab === "login" ? 0 : "100%" }}
-                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                animate={{ x: activeTab === "login" ? "0%" : "100%" }}
                 sx={{
                   position: "absolute", top: 4, bottom: 4, left: 4,
                   width: "calc(50% - 4px)", bgcolor: "primary.main", borderRadius: 50, zIndex: 0
                 }}
               />
-              <Button fullWidth onClick={switchToLogin} sx={{ zIndex: 1, borderRadius: 50, color: activeTab === "login" ? "#fff" : "text.secondary", transition: 'color 0.2s' }}>Login</Button>
-              <Button fullWidth onClick={switchToRegister} sx={{ zIndex: 1, borderRadius: 50, color: activeTab === "register" ? "#fff" : "text.secondary", transition: 'color 0.2s' }}>Register</Button>
+              <Button fullWidth onClick={switchToLogin} sx={{ zIndex: 1, borderRadius: 50, color: activeTab === "login" ? "#fff" : "text.secondary" }}>Login</Button>
+              <Button fullWidth onClick={switchToRegister} sx={{ zIndex: 1, borderRadius: 50, color: activeTab === "register" ? "#fff" : "text.secondary" }}>Register</Button>
             </Box>
           )}
 
-          <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={activeTab}
-                custom={direction}
-                variants={formVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-              >
-                {activeTab === "login" && <Login switchToRegister={switchToRegister} switchToForgot={switchToForgot} onSuccess={handleCloseAuth} />}
-                {activeTab === "register" && <Register switchToLogin={switchToLogin} onSuccess={handleCloseAuth} />}
-                {activeTab === "forgot" && <ForgotPassword switchToLogin={switchToLogin} />}
-              </motion.div>
-            </AnimatePresence>
-          </Box>
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={activeTab}
+              custom={direction}
+              variants={formVariants}
+              initial="enter" animate="center" exit="exit"
+              transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+            >
+              {activeTab === "login" && <Login switchToRegister={switchToRegister} switchToForgot={switchToForgot} onSuccess={handleCloseAuth} />}
+              {activeTab === "register" && <Register switchToLogin={switchToLogin} onSuccess={handleCloseAuth} />}
+              {activeTab === "forgot" && <ForgotPassword switchToLogin={switchToLogin} />}
+            </motion.div>
+          </AnimatePresence>
         </Card>
       </Dialog>
 
-      {/* DRAWER MENU */}
+      {/* --- DRAWER --- */}
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: "100%", sm: 360 }, backgroundColor: "#4A2E2E", color: "#D8B67B" } }}>
         <Box sx={{ p: 4, height: "100%", display: "flex", flexDirection: "column" }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 5 }}>
@@ -270,9 +270,9 @@ export default function Navbar() {
           </Box>
 
           {user && (
-            <Box component={motion.div} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} sx={{ textAlign: "center", mb: 5 }}>
-              <Avatar src={user?.avatar} sx={{ width: 80, height: 80, mx: "auto", mb: 2, border: "2px solid #D8B67B", bgcolor: "#D8B67B", color: "#4A2E2E" }}>
-                {displayName[0].toUpperCase()}
+            <Box sx={{ textAlign: "center", mb: 5 }}>
+              <Avatar src={user?.avatar} sx={{ width: 80, height: 80, mx: "auto", mb: 2, border: "2px solid #D8B67B" }}>
+                {displayName[0]?.toUpperCase()}
               </Avatar>
               <Typography fontWeight={800} variant="h6" sx={{ color: "white" }}>Hi, {displayName}</Typography>
               <Typography variant="body2" sx={{ color: "rgba(216, 182, 123, 0.7)", mt: 0.5 }}>{user.email}</Typography>
@@ -283,8 +283,6 @@ export default function Navbar() {
             {drawerLinks.map((item) => (
               <ListItemButton 
                 key={item.text} 
-                component={motion.div} 
-                whileHover={{ x: 10 }} 
                 onClick={() => { navigate(item.path); setDrawerOpen(false); }} 
                 sx={{ mb: 1, py: 1.5, borderRadius: "14px" }}
               >
@@ -298,7 +296,7 @@ export default function Navbar() {
 
           <Box sx={{ pb: 2 }}>
             {user ? (
-              <Button fullWidth component={motion.button} whileHover={{ scale: 1.02 }} startIcon={<LogoutIcon />} onClick={handleLogoutAction} sx={{ color: "#ff8a80", fontWeight: 800, py: 2, borderRadius: "50px", border: "1px solid rgba(255,138,128,0.3)" }}>Log Out</Button>
+              <Button fullWidth startIcon={<LogoutIcon />} onClick={handleLogoutAction} sx={{ color: "#ff8a80", fontWeight: 800, py: 2, borderRadius: "50px", border: "1px solid rgba(255,138,128,0.3)" }}>Log Out</Button>
             ) : (
               <Button fullWidth variant="contained" onClick={() => { setDrawerOpen(false); handleOpenAuth(); }} sx={{ py: 2, fontWeight: 800, borderRadius: "50px", bgcolor: "secondary.main", color: "primary.main" }}>Sign In / Register</Button>
             )}
@@ -307,6 +305,6 @@ export default function Navbar() {
       </Drawer>
 
       <Toolbar sx={{ height: { xs: 70, md: 90 } }} />
-    </>
+    </Box>
   );
 }

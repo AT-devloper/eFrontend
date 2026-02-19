@@ -11,33 +11,25 @@ import { Box } from "@mui/material";
  */
 export default function SellerLayout({ children }) {
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        minHeight: '100vh',
-        bgcolor: '#fff' // Clean white background for luxury feel
-      }}
+    <Box
+      display="flex"
+      flexDirection="column"
+      minHeight="100vh" // ensures the layout fills the viewport
     >
-      {/* If your Navbar is 'fixed', this Box ensures content 
-         starts exactly below it without using "mt-5" hacks.
-      */}
+      {/* Navbar at the top */}
       <Navbar />
 
+      {/* Main content grows to fill space */}
       <Box
         component="main"
-        sx={{
-          flexGrow: 1,
-          width: '100%',
-          // Adjust 64px based on your actual Navbar height
-          pt: { xs: '56px', sm: '64px' }, 
-          display: 'flex',
-          flexDirection: 'column'
-        }}
+        flexGrow={1} // takes all available vertical space
+        p={2} // optional padding
+        bgcolor="#f9f9f9" // optional background for main content
       >
         {children}
       </Box>
 
+      {/* Footer at the bottom */}
       <Footer />
     </Box>
   );

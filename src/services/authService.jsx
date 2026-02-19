@@ -1,4 +1,4 @@
-import api from "../api/axiosinstance";
+import api from "../api/axiosInstance";
 
 export const authService = {
   register: (data) => api.post("/register", data),
@@ -11,7 +11,7 @@ export const authService = {
 
   login: (data) => api.post("/login", data),
   
-  googleLogin: (idToken) => api.post("/google", { idToken }),
+  googleLogin: (idToken) => api.post("/auth/google", { idToken }),
 
   requestPasswordReset: (email) =>
   api.post(`/forgot-password?email=${encodeURIComponent(email)}`),
