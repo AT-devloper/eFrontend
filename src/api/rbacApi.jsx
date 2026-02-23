@@ -1,11 +1,12 @@
 import api from "./axiosInstance";
 
-// Get permissions for a role
-export const getRolePermissions = (roleId) => {
-  return api.get(`/auth/rbac/roles/${roleId}/permissions`);
-};
+// ROLE → PERMISSIONS
+export const getRolePermissions = (roleId) =>
+  api.get(`/rbac/roles/${roleId}/permissions`);
 
-// Update permissions for a role
-export const updateRolePermissions = (roleId, permissionIds) => {
-  return api.put(`/auth/rbac/roles/${roleId}/permissions`, permissionIds);
-};
+export const updateRolePermissions = (roleId, permissionIds) =>
+  api.put(`/rbac/roles/${roleId}/permissions`, permissionIds);
+
+// ALL PERMISSIONS
+export const getPermissions = () =>
+  api.get("/rbac/permissions");

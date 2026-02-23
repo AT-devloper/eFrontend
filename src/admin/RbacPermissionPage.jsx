@@ -1,171 +1,133 @@
 import { useEffect, useState } from "react";
-import {
-  getRolePermissions,
-  updateRolePermissions
-} from "../api/rbacApi";
-import RoleSelector from "../components/auth/RoleSelector";
+import { getRolePermissions, updateRolePermissions } from "../api/rbacApi";
+import { useUser } from "../context/UserContext"; // import context
+import { Box, Typography, Checkbox, FormControlLabel, Button, Paper } from "@mui/material";
+
+// Define which roles each role can manage
+const ROLE_HIERARCHY = {
+  SUPER_ADMIN: ["ADMIN", "SELLER"],
+  ADMIN: ["SELLER"],
+  SELLER: [] // cannot manage anyone
+};
 
 export default function RbacPermissionPage() {
-
-  const [roleId, setRoleId] = useState(null);
+  const { user } = useUser(); // get logged-in user from context
+  const [roleId, setRoleId] = useState("");
   const [permissions, setPermissions] = useState({});
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
 
-  /* ===============================
-     GET ROLES SAFELY
-  =============================== */
-
-  const storedRoles = JSON.parse(localStorage.getItem("roles") || "[]");
-
-  // Remove ROLE_ prefix if exists
-  const currentUserRoles = storedRoles.map(role =>
-    role.replace("ROLE_", "")
-  );
+  // Get current user's highest role (or first role if multiple)
+  const currentUserRole = user?.roles?.[0] || "";
+  const manageableRoles = ROLE_HIERARCHY[currentUserRole] || [];
 
   /* ===============================
-     ROLE HIERARCHY
+     LOAD PERMISSIONS FOR ROLE
   =============================== */
-
-  const roles =
-  currentUserRoles.includes("SUPER_ADMIN")
-    ? [
-        { id: 2, name: "ADMIN" },
-        { id: 3, name: "SELLER" }  // ✅ correct ID
-      ]
-    : currentUserRoles.includes("ADMIN")
-      ? [
-          { id: 3, name: "SELLER" }  // ✅ correct ID
-        ]
-      : [];
-
-
-  /* ===============================
-     LOAD PERMISSIONS
-  =============================== */
-
   useEffect(() => {
     if (!roleId) return;
 
     setLoading(true);
 
     getRolePermissions(roleId)
-      .then(res => {
+      .then((res) => {
         setPermissions(res.data);
 
         const assigned = new Set();
-        Object.values(res.data)
-          .flat()
-          .forEach(p => {
-            if (p.assigned) assigned.add(p.id);
+        Object.values(res.data).forEach((moduleList) => {
+          moduleList.forEach((perm) => {
+            if (perm.assigned) assigned.add(perm.id);
           });
+        });
 
         setSelected(assigned);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
-        alert("Not allowed or session expired");
-        setPermissions({});
-        setSelected(new Set());
+        alert("Server error while loading permissions");
       })
       .finally(() => setLoading(false));
-
   }, [roleId]);
 
   /* ===============================
-     TOGGLE PERMISSION
+     TOGGLE CHECKBOX
   =============================== */
-
   const togglePermission = (id) => {
-    const copy = new Set(selected);
-    copy.has(id) ? copy.delete(id) : copy.add(id);
-    setSelected(copy);
+    const updated = new Set(selected);
+    updated.has(id) ? updated.delete(id) : updated.add(id);
+    setSelected(updated);
   };
 
   /* ===============================
-     SAVE
+     SAVE PERMISSIONS
   =============================== */
-
-  const savePermissions = () => {
-    if (!roleId) return;
+  const handleSave = () => {
+    if (!roleId) return alert("Select role first");
 
     updateRolePermissions(roleId, Array.from(selected))
       .then(() => alert("Permissions updated successfully"))
       .catch(() => alert("Update failed"));
   };
 
-  /* ===============================
-     UI
-  =============================== */
-
   return (
-    <div style={{ padding: "20px", maxWidth: "700px" }}>
-      <h2>Role Permission Management</h2>
+    <Box p={4}>
+      <Typography variant="h4" gutterBottom>
+        Role Permission Management
+      </Typography>
 
-      {roles.length === 0 && (
-        <p style={{ color: "red" }}>
-          You do not have permission to manage roles.
-        </p>
-      )}
-
-      {roles.length > 0 && (
-        <RoleSelector
-          roles={roles}
+      {/* ROLE SELECT */}
+      <Box mb={3}>
+        <Typography>Select Role</Typography>
+        <select
           value={roleId}
-          onChange={setRoleId}
-        />
-      )}
-
-      {!roleId && roles.length > 0 && (
-        <p>Please select a role</p>
-      )}
-
-      {loading && <p>Loading permissions...</p>}
-
-      {!loading && roleId && Object.entries(permissions).map(([module, perms]) => (
-        <div
-          key={module}
-          style={{
-            border: "1px solid #ddd",
-            padding: "10px",
-            marginBottom: "12px",
-            borderRadius: "6px"
-          }}
+          onChange={(e) => setRoleId(e.target.value)}
+          style={{ padding: "8px", width: "200px" }}
+          disabled={!currentUserRole} // disable until user is loaded
         >
-          <h4>{module}</h4>
+          <option value="">-- Select --</option>
+          {manageableRoles.includes("SUPER_ADMIN") && <option value="1">SUPER_ADMIN</option>}
+          {manageableRoles.includes("ADMIN") && <option value="2">ADMIN</option>}
+          {manageableRoles.includes("SELLER") && <option value="3">SELLER</option>}
+        </select>
+      </Box>
 
-          {perms.map(p => (
-            <label
-              key={p.id}
-              style={{ display: "block" }}
-            >
-              <input
-                type="checkbox"
-                checked={selected.has(p.id)}
-                disabled={p.disabled}
-                onChange={() => togglePermission(p.id)}
-              />{" "}
-              {p.code}
-            </label>
-          ))}
-        </div>
-      ))}
+      {!roleId && <Typography>Please select a role</Typography>}
+      {loading && <Typography>Loading...</Typography>}
 
-      {roleId && (
-        <button
-          onClick={savePermissions}
-          style={{
-            padding: "8px 16px",
-            background: "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
-        >
+      {/* MODULE WISE LIST */}
+      {!loading &&
+        roleId &&
+        Object.entries(permissions).map(([moduleName, perms]) => (
+          <Paper key={moduleName} sx={{ p: 2, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              {moduleName}
+            </Typography>
+
+            {perms.map((perm) => (
+              <FormControlLabel
+                key={perm.id}
+                control={
+                  <Checkbox
+                    checked={selected.has(perm.id)}
+                    onChange={() => togglePermission(perm.id)}
+                    disabled={perm.disabled}
+                  />
+                }
+                label={perm.code}
+              />
+            ))}
+          </Paper>
+        ))}
+
+      {roleId && manageableRoles.length > 0 && (
+        <Button variant="contained" color="primary" onClick={handleSave}>
           Save Changes
-        </button>
+        </Button>
       )}
-    </div>
+
+      {manageableRoles.length === 0 && (
+        <Typography>You do not have permission to manage any roles.</Typography>
+      )}
+    </Box>
   );
 }

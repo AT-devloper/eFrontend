@@ -17,10 +17,11 @@ import {
   Login as LoginIcon,
   Menu as MenuIcon,
   AdminPanelSettings as AdminIcon,
-  Dashboard as SellerIcon 
+  Dashboard as SellerIcon,
+  CheckCircle as CheckCircleIcon
 } from "@mui/icons-material";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react"; // Updated for latest motion
+import { motion, AnimatePresence } from "motion/react"; 
 import { useUser } from "../../context/UserContext";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
@@ -43,6 +44,7 @@ export default function Navbar() {
   const [direction, setDirection] = useState(0); 
   const [isScrolled, setIsScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [toast, setToast] = useState({ open: false, message: "" });
 
   // Scroll listener
   useEffect(() => {
@@ -51,8 +53,34 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Check localStorage on mount for premium toast and DELAY it for the GlobalLoader
+  useEffect(() => {
+    const message = localStorage.getItem("premiumToast");
+    if (message) {
+      // Delay the toast by 1.5s so it appears exactly as the GlobalLoader finishes
+      setTimeout(() => {
+        setToast({
+          open: true,
+          message,
+          severity: "success",
+          premium: true,
+        });
+      }, 1500);
+      localStorage.removeItem("premiumToast"); // clear after grabbing it
+    }
+  }, []);
+
+  // Auto-hide custom animated toast after 3.5 seconds
+  useEffect(() => {
+    if (toast.open) {
+      const timer = setTimeout(() => {
+        setToast((prev) => ({ ...prev, open: false }));
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.open]);
+
   // --- LOGIC FOR INSTANT UI UPDATES ---
-  // We use useMemo but ensure 'user' and 'user.roles' are deep dependencies
   const { navLinks, drawerLinks, displayName, shortName } = useMemo(() => {
     const role = user?.roles?.[0];
     const name = user?.username || user?.name || user?.email?.split('@')[0] || "Guest";
@@ -68,7 +96,6 @@ export default function Navbar() {
       { label: "Home", path: "/" },
       { label: "Collections", path: "/products" },
     ];
-    // if (panelLink) nLinks.push({ label: panelLink.label, path: panelLink.path });
     if (user) {
       nLinks.push({ label: "My Orders", path: "/my-orders" });
       nLinks.push({ label: "Cart", path: "/cart", isCart: true });
@@ -91,18 +118,29 @@ export default function Navbar() {
       displayName: name, 
       shortName: name.split(' ')[0] 
     };
-  }, [user, user?.roles]); // Listening specifically to roles array change
+  }, [user, user?.roles]); 
 
   const handleLogoutAction = () => {
     logout();
     setDrawerOpen(false);
+
+    setToast({
+      open: true,
+      message: "Logged out successfully!",
+      severity: "info",  
+      premium: true,    
+    });
+
     if (["/my-orders", "/cart", "/wishlist", "/admin", "/seller"].includes(location.pathname)) {
       navigate("/");
     }
   };
 
   const handleOpenAuth = () => { setDirection(0); setActiveTab("login"); setOpenAuth(true); };
-  const handleCloseAuth = () => setOpenAuth(false);
+  
+  const handleCloseAuth = () => {
+    setOpenAuth(false);
+  };
   
   const switchToLogin = () => { setDirection(-1); setActiveTab("login"); };
   const switchToRegister = () => { setDirection(1); setActiveTab("register"); };
@@ -118,7 +156,7 @@ export default function Navbar() {
   };
 
   return (
-    <Box key={user?.id || 'guest'}> {/* Force re-render on user change */}
+    <Box key={user?.id || 'guest'}> 
       <Box sx={{
         position: "fixed", top: isScrolled ? 15 : 0, left: 0, right: 0,
         zIndex: 1100, display: "flex", justifyContent: "center",
@@ -223,7 +261,7 @@ export default function Navbar() {
       {/* --- AUTH MODAL --- */}
       <Dialog open={openAuth} onClose={handleCloseAuth} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 6, overflow: 'hidden' } }}>
         <Card sx={{ p: 3, position: "relative" }}>
-          <IconButton onClick={handleCloseAuth} sx={{ position: "absolute", right: 12, top: 12 }}><CloseIcon /></IconButton>
+          <IconButton onClick={() => setOpenAuth(false)} sx={{ position: "absolute", right: 12, top: 12 }}><CloseIcon /></IconButton>
           
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 2 }}>
             <Typography variant="h4" sx={{ fontFamily: "Playfair Display", fontWeight: 900, color: "primary.main" }}>AT</Typography>
@@ -253,58 +291,170 @@ export default function Navbar() {
               initial="enter" animate="center" exit="exit"
               transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
             >
-              {activeTab === "login" && <Login switchToRegister={switchToRegister} switchToForgot={switchToForgot} onSuccess={handleCloseAuth} />}
-              {activeTab === "register" && <Register switchToLogin={switchToLogin} onSuccess={handleCloseAuth} />}
+              {activeTab === "login" && (
+                <Login
+                  switchToRegister={switchToRegister}
+                  switchToForgot={switchToForgot}
+                  onSuccess={() => {
+                    localStorage.setItem("showLoginLoader", "true"); // Trigger the luxury loader
+                    localStorage.setItem("premiumToast", "Logged in successfully! 🎉"); 
+                    window.location.reload(); 
+                  }}
+                />
+              )}
+
+              {activeTab === "register" && (
+                <Register
+                  switchToLogin={switchToLogin}
+                  onSuccess={() => {
+                    localStorage.setItem("showLoginLoader", "true"); // Trigger the luxury loader
+                    localStorage.setItem("premiumToast", "Registered successfully! 🎉"); 
+                    window.location.reload();
+                  }}
+                />
+              )}
+
               {activeTab === "forgot" && <ForgotPassword switchToLogin={switchToLogin} />}
             </motion.div>
           </AnimatePresence>
         </Card>
       </Dialog>
 
-      {/* --- DRAWER --- */}
-      <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)} PaperProps={{ sx: { width: { xs: "100%", sm: 360 }, backgroundColor: "#4A2E2E", color: "#D8B67B" } }}>
-        <Box sx={{ p: 4, height: "100%", display: "flex", flexDirection: "column" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 5 }}>
-            <Typography variant="h5" sx={{ fontFamily: "Playfair Display", fontWeight: 900, color: "secondary.main" }}>AT-LUXE</Typography>
-            <IconButton onClick={() => setDrawerOpen(false)} sx={{ color: "secondary.main" }}><CloseIcon /></IconButton>
+                  {/* --- DRAWER --- */}
+      <Drawer 
+        anchor="right" 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)} 
+        PaperProps={{ 
+          sx: { 
+            width: { xs: "57%", sm: 360 }, // FIXED: 85% width on mobile so it doesn't trap the screen
+            maxWidth: 380,
+            backgroundColor: "#4A2E2E", 
+            color: "#D8B67B",
+borderTopLeftRadius: 30, 
+            borderBottomLeftRadius: 30,
+            borderLeft: "1px solid rgba(216, 182, 123, 0.15)", 
+            boxShadow: "-15px 0px 40px rgba(0,0,0,0.6)"
+          } 
+        }}
+      >
+        <Box sx={{ p: { xs: 3, sm: 4 }, height: "100%", display: "flex", flexDirection: "column" }}>
+          
+          {/* Header */}
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: { xs: 3, sm: 5 } }}>
+            <Typography variant="h5" sx={{ fontFamily: "Playfair Display", fontWeight: 900, color: "secondary.main", letterSpacing: 1 }}>
+              AT-LUXE
+            </Typography>
+            <IconButton 
+              onClick={() => setDrawerOpen(false)} 
+              sx={{ 
+                color: "secondary.main", 
+                bgcolor: "rgba(216,182,123,0.1)", 
+                '&:hover': { bgcolor: "rgba(216,182,123,0.2)" } 
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
           </Box>
 
+          {/* Profile Section */}
           {user && (
-            <Box sx={{ textAlign: "center", mb: 5 }}>
-              <Avatar src={user?.avatar} sx={{ width: 80, height: 80, mx: "auto", mb: 2, border: "2px solid #D8B67B" }}>
+            <Box sx={{ textAlign: "center", mb: { xs: 3, sm: 5 } }}>
+              <Avatar src={user?.avatar} sx={{ width: { xs: 68, sm: 80 }, height: { xs: 68, sm: 80 }, mx: "auto", mb: 2, border: "2px solid #D8B67B" }}>
                 {displayName[0]?.toUpperCase()}
               </Avatar>
-              <Typography fontWeight={800} variant="h6" sx={{ color: "white" }}>Hi, {displayName}</Typography>
-              <Typography variant="body2" sx={{ color: "rgba(216, 182, 123, 0.7)", mt: 0.5 }}>{user.email}</Typography>
+              <Typography fontWeight={800} variant="h6" sx={{ color: "white", fontSize: { xs: "1.1rem", sm: "1.25rem" } }}>
+                Hi, {displayName}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "rgba(216, 182, 123, 0.7)", mt: 0.5 }}>
+                {user.email}
+              </Typography>
             </Box>
           )}
 
-          <List sx={{ flex: 1 }}>
+          {/* Navigation Links (Scrollable if screen is too small) */}
+          <List sx={{ 
+            flex: 1, 
+            overflowY: "auto", 
+            pr: 1, 
+            '&::-webkit-scrollbar': { width: '4px' }, 
+            '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(216, 182, 123, 0.3)', borderRadius: '4px' } 
+          }}>
             {drawerLinks.map((item) => (
               <ListItemButton 
                 key={item.text} 
                 onClick={() => { navigate(item.path); setDrawerOpen(false); }} 
-                sx={{ mb: 1, py: 1.5, borderRadius: "14px" }}
+                sx={{ 
+                  mb: 1, 
+                  py: { xs: 1.2, sm: 1.5 }, 
+                  borderRadius: "14px",
+                  transition: "all 0.3s",
+                  '&:hover': { bgcolor: "rgba(216,182,123,0.1)", transform: "translateX(6px)" } 
+                }}
               >
-                <ListItemIcon sx={{ color: "secondary.main" }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: 600, color: "white" }} />
+                <ListItemIcon sx={{ color: "secondary.main", minWidth: 40 }}>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: 600, color: "white", fontSize: { xs: "0.95rem", sm: "1rem" } }} />
               </ListItemButton>
             ))}
           </List>
 
-          <Divider sx={{ borderColor: "rgba(216,182,123,0.2)", my: 3 }} />
+          <Divider sx={{ borderColor: "rgba(216,182,123,0.2)", my: { xs: 2, sm: 3 } }} />
 
-          <Box sx={{ pb: 2 }}>
+          {/* Bottom Action Area */}
+          <Box sx={{ pb: { xs: 2, sm: 0 } }}>
             {user ? (
-              <Button fullWidth startIcon={<LogoutIcon />} onClick={handleLogoutAction} sx={{ color: "#ff8a80", fontWeight: 800, py: 2, borderRadius: "50px", border: "1px solid rgba(255,138,128,0.3)" }}>Log Out</Button>
+              <Button fullWidth startIcon={<LogoutIcon />} onClick={handleLogoutAction} sx={{ color: "#ff8a80", fontWeight: 800, py: 1.5, borderRadius: "50px", border: "1px solid rgba(255,138,128,0.3)", '&:hover': { bgcolor: "rgba(255,138,128,0.1)" } }}>
+                Log Out
+              </Button>
             ) : (
-              <Button fullWidth variant="contained" onClick={() => { setDrawerOpen(false); handleOpenAuth(); }} sx={{ py: 2, fontWeight: 800, borderRadius: "50px", bgcolor: "secondary.main", color: "primary.main" }}>Sign In / Register</Button>
+              <Button fullWidth variant="contained" onClick={() => { setDrawerOpen(false); handleOpenAuth(); }} sx={{ py: 1.5, fontWeight: 800, borderRadius: "50px", bgcolor: "secondary.main", color: "primary.main", '&:hover': { bgcolor: "secondary.light" } }}>
+                Sign In / Register
+              </Button>
             )}
           </Box>
         </Box>
       </Drawer>
 
       <Toolbar sx={{ height: { xs: 70, md: 90 } }} />
+
+      {/* --- CUSTOM ANIMATED TOAST --- */}
+      <Box sx={{ position: "fixed", top: 24, left: 0, right: 0, zIndex: 9999, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+        <AnimatePresence>
+          {toast.open && (
+            <Box
+              component={motion.div}
+              initial={{ opacity: 0, y: -40, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                bgcolor: toast.premium ? "#D8B67B" : "#4caf50",
+                color: toast.premium ? "#4A2E2E" : "#fff",
+                px: 3,
+                py: 1.5,
+                borderRadius: "50px",
+                boxShadow: "0px 10px 30px rgba(0,0,0,0.25)",
+                pointerEvents: "auto", 
+              }}
+            >
+              {toast.severity === "info" ? <LogoutIcon sx={{ fontSize: 20 }} /> : <CheckCircleIcon sx={{ fontSize: 20 }} />}
+              <Typography sx={{ fontWeight: 800, fontSize: "0.95rem" }}>
+                {toast.message}
+              </Typography>
+              <IconButton 
+                size="small" 
+                onClick={() => setToast({ ...toast, open: false })}
+                sx={{ color: "inherit", ml: 1, p: 0.5, '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' } }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          )}
+        </AnimatePresence>
+      </Box>
     </Box>
   );
 }

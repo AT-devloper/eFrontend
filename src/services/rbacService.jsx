@@ -7,6 +7,9 @@ export const createPermission = (data) =>
 export const getPermissions = () =>
   api.get("/rbac/permissions");
 
+export const deletePermission = (id) =>
+  api.delete(`/auth/rbac/permissions/${id}`);
+
 // ROLES
 export const createRole = (data) =>
   api.post("/rbac/roles", data);

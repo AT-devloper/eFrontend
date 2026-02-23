@@ -31,10 +31,8 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import SecurityIcon from "@mui/icons-material/Security";
-import HomeIcon from "@mui/icons-material/Home";
 import GroupIcon from "@mui/icons-material/Group";
 import LockIcon from "@mui/icons-material/Lock";
-import LogoutIcon from "@mui/icons-material/Logout";
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
 const drawerWidth = 280;
@@ -69,6 +67,7 @@ export default function AdminLayout() {
   const displayName = user?.username || user?.name || user?.email?.split("@")[0] || "Admin";
   const userRole = user?.roles?.[0] || "USER";
 
+  // RBAC: which sidebar items are visible for this user
   const filteredMenuItems = useMemo(() => {
     const allItems = [
       { text: "Products", icon: <InventoryIcon />, path: "/admin/sellerpannel", roles: ["SUPER_ADMIN", "ADMIN", "SELLER"] },
@@ -108,15 +107,24 @@ export default function AdminLayout() {
             },
           }}
         >
+          {/* Sidebar Avatar */}
           <Box sx={{ p: 3, display: "flex", alignItems: "center", gap: 2, minHeight: 80 }}>
             <Avatar sx={{ bgcolor: "secondary.main", color: "primary.main", fontWeight: 900 }}>
               {displayName[0]?.toUpperCase()}
             </Avatar>
             {!collapsed && (
-              <Typography variant="h6" sx={{ color: "secondary.main", fontWeight: 900, letterSpacing: 1.5 }}>LUXE.</Typography>
+              <Box>
+                <Typography variant="h6" sx={{ color: "secondary.main", fontWeight: 900, letterSpacing: 1.5 }}>
+                  LUXE.
+                </Typography>
+                <Typography variant="body2" sx={{ color: "secondary.light", fontWeight: 600 }}>
+                  {userRole.replace("ROLE_", "")}
+                </Typography>
+              </Box>
             )}
           </Box>
 
+          {/* Sidebar Menu */}
           <List sx={{ px: 2 }}>
             {filteredMenuItems.map((item, index) => (
               item.divider ? (
@@ -131,32 +139,21 @@ export default function AdminLayout() {
                     borderRadius: "12px", 
                     mb: 0.5,
                     transition: "all 0.3s ease",
-                    
-                    // 1. DEFAULT STATE (Not Selected, Not Hovered)
                     color: "#F5EDE5", 
-                    "& .MuiListItemIcon-root": { 
-                      color: "secondary.main", 
-                      transition: "color 0.2s" 
-                    },
-
-                    // 2. GENERIC HOVER STATE (Only applies if NOT selected)
+                    "& .MuiListItemIcon-root": { color: "secondary.main", transition: "color 0.2s" },
                     "&:hover": {
                       backgroundColor: "rgba(216,182,123,0.15)", 
                       color: "secondary.main", 
                       "& .MuiListItemIcon-root": { color: "#FFFFFF" }
                     },
-
-                    // 3. SELECTED STATE (Active Page)
                     "&.Mui-selected": {
                       bgcolor: "secondary.main", 
                       color: "primary.main",
                       "& .MuiListItemIcon-root": { color: "primary.main" },
-                      
-                      // 4. SELECTED + HOVER STATE (Crucial Fix)
                       "&:hover": {
-                        backgroundColor: "secondary.light", // Light Gold
-                        color: "primary.main", // STAY DARK (Don't turn gold)
-                        "& .MuiListItemIcon-root": { color: "primary.main" } // STAY DARK
+                        backgroundColor: "secondary.light",
+                        color: "primary.main",
+                        "& .MuiListItemIcon-root": { color: "primary.main" }
                       }
                     },
                   }}
@@ -178,15 +175,28 @@ export default function AdminLayout() {
               </IconButton>
               <Typography variant="h6" sx={{ fontWeight: 800, flexGrow: 1 }}>Panel</Typography>
               
+              {/* Navbar Avatar */}
               <IconButton onClick={(e) => setAnchorEl(e.currentTarget)}>
                 <Avatar sx={{ border: "2px solid", borderColor: "secondary.main", bgcolor: "primary.main", color: "secondary.main" }}>
-                  {displayName[0]}
+                  {displayName[0]?.toUpperCase()}
                 </Avatar>
               </IconButton>
-              <Menu anchorEl={anchorEl} open={openMenu} onClose={() => setAnchorEl(null)} PaperProps={{ sx: { borderRadius: "12px", mt: 1 } }}>
-                 <Box sx={{ px: 2, py: 1 }}><Typography variant="subtitle2" fontWeight={800}>{displayName}</Typography></Box>
-                 <Divider />
-                 <MenuItem onClick={handleLogoutAction} sx={{ color: 'error.main', fontWeight: 600 }}>Logout</MenuItem>
+              <Menu
+                anchorEl={anchorEl}
+                open={openMenu}
+                onClose={() => setAnchorEl(null)}
+                PaperProps={{ sx: { borderRadius: "12px", mt: 1, minWidth: 200 } }}
+              >
+                <Box sx={{ px: 2, py: 1 }}>
+                  <Typography variant="subtitle1" fontWeight={700}>{displayName}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {userRole.replace("ROLE_", "")}
+                  </Typography>
+                </Box>
+                <Divider />
+                <MenuItem onClick={handleLogoutAction} sx={{ color: 'error.main', fontWeight: 600 }}>
+                  Logout
+                </MenuItem>
               </Menu>
             </Toolbar>
           </AppBar>
@@ -201,17 +211,27 @@ export default function AdminLayout() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   sx={{
-                    height: "70vh", display: "flex", flexDirection: "column",
-                    justifyContent: "center", alignItems: "center", textAlign: "center",
+                    height: "70vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    textAlign: "center",
                   }}
                 >
                   <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3 }}>
                     <Avatar
                       sx={{
-                        width: 140, height: 140, bgcolor: "primary.main",
-                        border: "6px solid", borderColor: "secondary.main",
-                        fontSize: "3.5rem", fontWeight: 900, color: "secondary.main",
-                        mb: 4, boxShadow: "0 20px 50px rgba(0,0,0,0.15)"
+                        width: 140,
+                        height: 140,
+                        bgcolor: "primary.main",
+                        border: "6px solid",
+                        borderColor: "secondary.main",
+                        fontSize: "3.5rem",
+                        fontWeight: 900,
+                        color: "secondary.main",
+                        mb: 4,
+                        boxShadow: "0 20px 50px rgba(0,0,0,0.15)"
                       }}
                     >
                       {displayName[0].toUpperCase()}
@@ -232,8 +252,12 @@ export default function AdminLayout() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
                     sx={{
-                      display: 'flex', alignItems: 'center', gap: 2,
-                      px: 4, py: 2, borderRadius: "100px",
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      px: 4,
+                      py: 2,
+                      borderRadius: "100px",
                       bgcolor: "primary.main",
                       boxShadow: "0 10px 30px rgba(74, 46, 46, 0.3)"
                     }}

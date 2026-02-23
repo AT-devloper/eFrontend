@@ -26,13 +26,13 @@ import Permissions from "../admin/Permissions";
 // NEW: Import the Welcome Component (or it's handled inside AdminLayout index)
 // If you didn't create a separate file, the AdminLayout "isDefaultPage" logic 
 // we wrote earlier will handle the "/" path automatically.
+// AppRoutes.jsx
+import VerifyOTP from "../components/auth/VerifyOtp"; // <-- create this file
 
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* Redirect default "/" to "/home" */}
       <Route path="/" element={<Navigate to="/home" />} />
-
       {/* Public Pages */}
       <Route path="/home" element={<Home />} />
       <Route path="/products" element={<Products />} />
@@ -43,6 +43,9 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/auth" element={<AuthToggleCard />} />
 
+      {/* NEW: OTP Verification */}
+      <Route path="/verify-otp" element={<VerifyOTP />} />
+
       {/* User Pages */}
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
@@ -50,20 +53,15 @@ export default function AppRoutes() {
       <Route path="/my-orders/:orderNumber" element={<OrderDetail />} />
       <Route path="/wishlist" element={<Wishlist />} />
 
-      {/* Seller Pages (Standalone) */}
+      {/* Seller Pages */}
       <Route path="/product/products" element={<ProductListPage />} />
 
-      {/* --- ADMIN PANEL GROUP --- */}
+      {/* Admin Panel */}
       <Route path="/admin" element={<AdminLayout />}>
-        {/* LEAVE THIS EMPTY or use <Route index element={<div />} /> 
-           Because the AdminLayout we built checks if location.pathname === "/admin"
-           to show the Branding/Animated Logo.
-        */}
-        <Route index element={null} /> 
-
-        <Route path="orders" element={<AdminOrdersDashboard/>} />
-        <Route path="sellerpannel" element={<CreateProductPage />}/>
-        <Route path="rbac/permissions" element={<RbacPermissionPage />}/>
+        <Route index element={null} />
+        <Route path="orders" element={<AdminOrdersDashboard />} />
+        <Route path="sellerpannel" element={<CreateProductPage />} />
+        <Route path="rbac/permissions" element={<RbacPermissionPage />} />
         <Route path="create/permissions" element={<Permissions />} />
         <Route path="create/roles" element={<Roles />} />
         <Route path="assign-role" element={<AssignRole />} />
