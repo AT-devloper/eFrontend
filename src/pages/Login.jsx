@@ -64,7 +64,7 @@ const handleLogin = async (e) => {
   useEffect(() => {
     if (window.google) {
       window.google.accounts.id.initialize({
-        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+        client_id: "768380657938-cslmvflgrt2vsbos5nca61dg56g7hiqj.apps.googleusercontent.com",
         callback: handleGoogleLogin,
       });
       window.google.accounts.id.renderButton(

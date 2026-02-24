@@ -11,12 +11,14 @@ export const authService = {
 
   login: (data) => api.post("/login", data),
   
-  googleLogin: (idToken) => api.post("/auth/google", { idToken }),
+  // ✅ Fixed Google login endpoint
+  googleLogin: (idToken) => api.post("/google", { idToken }),
 
   requestPasswordReset: (email) =>
-  api.post(`/forgot-password?email=${encodeURIComponent(email)}`),
+    api.post(`/forgot-password?email=${encodeURIComponent(email)}`),
 
- verifyResetToken: (token) => api.get(`/reset-password/validate?token=${encodeURIComponent(token)}`),
+  verifyResetToken: (token) =>
+    api.get(`/reset-password/validate?token=${encodeURIComponent(token)}`),
 
   resetPassword: (data) => api.post("/reset-password", data),
 };

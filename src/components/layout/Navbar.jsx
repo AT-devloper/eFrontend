@@ -81,14 +81,15 @@ export default function Navbar() {
   }, [toast.open]);
 
   // --- LOGIC FOR INSTANT UI UPDATES ---
-  const { navLinks, drawerLinks, displayName, shortName } = useMemo(() => {
-    const role = user?.roles?.[0];
+const { navLinks, drawerLinks, displayName, shortName } = useMemo(() => {
     const name = user?.username || user?.name || user?.email?.split('@')[0] || "Guest";
-    
+
     let panelLink = null;
-    if (role === "SUPER_ADMIN" || role === "ADMIN") {
+    if (user?.isSuperAdmin?.()) {
       panelLink = { label: "Admin Panel", path: "/admin", icon: <AdminIcon />, text: "Admin Panel" };
-    } else if (role === "SELLER") {
+    } else if (user?.isAdmin?.()) {
+      panelLink = { label: "Admin Panel", path: "/admin", icon: <AdminIcon />, text: "Admin Panel" };
+    } else if (user?.isSeller?.()) {
       panelLink = { label: "Seller Panel", path: "/seller", icon: <SellerIcon />, text: "Seller Panel" };
     }
 
@@ -96,6 +97,7 @@ export default function Navbar() {
       { label: "Home", path: "/" },
       { label: "Collections", path: "/products" },
     ];
+
     if (user) {
       nLinks.push({ label: "My Orders", path: "/my-orders" });
       nLinks.push({ label: "Cart", path: "/cart", isCart: true });
@@ -105,6 +107,7 @@ export default function Navbar() {
       { text: "Home", icon: <HomeIcon />, path: "/" },
       { text: "Shop Collections", icon: <StoreIcon />, path: "/products" },
     ];
+
     if (panelLink) dLinks.push({ text: panelLink.text, icon: panelLink.icon, path: panelLink.path });
     if (user) {
       dLinks.push({ text: "My Orders", icon: <OrdersIcon />, path: "/my-orders" });
@@ -112,13 +115,13 @@ export default function Navbar() {
     }
     dLinks.push({ text: "Shopping Cart", icon: <ShoppingCartIcon />, path: "/cart" });
 
-    return { 
-      navLinks: nLinks, 
-      drawerLinks: dLinks, 
-      displayName: name, 
-      shortName: name.split(' ')[0] 
+    return {
+      navLinks: nLinks,
+      drawerLinks: dLinks,
+      displayName: name,
+      shortName: name.split(' ')[0]
     };
-  }, [user, user?.roles]); 
+}, [user]);
 
   const handleLogoutAction = () => {
     logout();
