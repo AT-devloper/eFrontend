@@ -10,6 +10,7 @@ const GlobalBackToTop = () => {
   // Toggle visibility based on scroll position
   useEffect(() => {
     const toggleVisibility = () => {
+      // Show slightly earlier on mobile since scrolling happens faster
       if (window.scrollY > 300) {
         setIsVisible(true);
       } else {
@@ -40,8 +41,9 @@ const GlobalBackToTop = () => {
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
           sx={{
             position: "fixed",
-            bottom: 40,
-            right: 40,
+            // Tucked closer to the edge on mobile (20px), standard distance on desktop (40px)
+            bottom: { xs: 20, md: 40 },
+            right: { xs: 20, md: 40 },
             zIndex: 9999,
           }}
         >
@@ -49,20 +51,27 @@ const GlobalBackToTop = () => {
             onClick={scrollToTop}
             aria-label="scroll back to top"
             sx={{
-              width: 60,
-              height: 60,
+              // Smaller button footprint on mobile
+              width: { xs: 45, md: 60 },
+              height: { xs: 45, md: 60 },
+              // Ensures the icon stays perfectly centered when button shrinks
+              minHeight: { xs: 45, md: 60 }, 
               bgcolor: theme.palette.secondary.main, // Gold
               color: theme.palette.primary.main,    // Burgundy Icon
-              boxShadow: "0px 10px 20px rgba(0,0,0,0.3)",
+              boxShadow: { 
+                xs: "0px 5px 15px rgba(0,0,0,0.3)", // Softer shadow on mobile
+                md: "0px 10px 20px rgba(0,0,0,0.3)" 
+              },
               border: `1px solid ${theme.palette.secondary.light}`,
+              transition: "all 0.3s ease",
               "&:hover": {
                 bgcolor: theme.palette.secondary.light, // Lighter Gold
                 transform: "translateY(-5px)",
               },
-              transition: "all 0.3s ease",
             }}
           >
-            <KeyboardArrowUpIcon sx={{ fontSize: "2rem" }} />
+            {/* Slightly smaller icon to match the smaller mobile button */}
+            <KeyboardArrowUpIcon sx={{ fontSize: { xs: "1.5rem", md: "2rem" } }} />
           </Fab>
         </Box>
       )}

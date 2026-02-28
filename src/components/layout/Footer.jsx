@@ -1,16 +1,14 @@
 import { Box, Container, Typography, Stack, Link, IconButton, Divider, TextField, useTheme } from "@mui/material";
-// Added the 'X' icon to your imports here:
-import { Instagram, Facebook, LinkedIn, ArrowForward, X } from "@mui/icons-material";
+import { Instagram, Facebook, LinkedIn, ArrowForward } from "@mui/icons-material";
 
 export default function Footer() {
   const theme = useTheme();
   const currentYear = new Date().getFullYear();
 
-  // Added the X (Twitter) URL and icon here:
+  // Define your actual social media URLs here
   const socialLinks = [
     { icon: <Instagram />, url: "https://www.instagram.com/" },
     { icon: <Facebook />, url: "https://www.facebook.com/" },
-    { icon: <X />, url: "https://x.com/" }, 
     { icon: <LinkedIn />, url: "https://www.linkedin.com/" }
   ];
 
@@ -142,7 +140,7 @@ export default function Footer() {
                 ))}
               </Stack>
 
-              {/* CONNECT SECTION - Now with X (Twitter) */}
+              {/* CONNECT SECTION - NOW FULLY WORKING */}
               <Stack spacing={2.5} sx={{ gridColumn: { xs: "1 / -1", sm: "auto" } }}>
                 <Typography variant="overline" sx={{ color: "secondary.main", fontWeight: 800, letterSpacing: 3, lineHeight: 1 }}>
                   CONNECT
@@ -151,14 +149,14 @@ export default function Footer() {
                    {socialLinks.map((social, i) => (
                      <Link 
                         key={i} 
-                        href={social.url}          
-                        target="_blank"            
-                        rel="noopener noreferrer"  
+                        href={social.url}          // Assigns the specific URL
+                        target="_blank"            // Opens in a new tab
+                        rel="noopener noreferrer"  // Security best practice for external links
                         sx={{ 
                           color: 'primary.contrastText', 
                           opacity: 0.7, 
                           transition: '0.3s',
-                          display: 'flex',         
+                          display: 'flex',         // Centers the icon neatly
                           '&:hover': { opacity: 1, color: 'secondary.main', transform: 'translateY(-3px)' } 
                         }}
                       >
@@ -216,7 +214,7 @@ export default function Footer() {
             alignItems={{ xs: "flex-start", sm: "center" }}
             sx={{ order: { xs: 1, md: 2 } }}
           >
-          
+            
              <Typography variant="caption" sx={{ opacity: 0.6, letterSpacing: 1 }}>PAYMENT SECURED BY RAZORPAY</Typography> 
           </Stack>
         </Stack>
