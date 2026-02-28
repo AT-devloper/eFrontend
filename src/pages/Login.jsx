@@ -54,7 +54,7 @@ const handleLogin = async (e) => {
     if (onSuccess) onSuccess(); 
     else navigate(redirectTo);
   } catch (err) {
-    setMessage(err.response?.data?.message || "Login failed. Check credentials.");
+    setMessage(err.response?.data?.message || "Login failed. Check credentials or Server.");
   } finally {
     setLoading(false);
   }

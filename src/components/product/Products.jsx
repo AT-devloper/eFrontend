@@ -176,7 +176,7 @@ const PremiumProductCard = React.memo(({ product, navigate, addToCart, inCart, r
                 "&:hover": { bgcolor: inCart ? "#b8962e" : "#333" }
               }}
             >
-              {inCart ? "ADDED" : "ADD TO BAG"}
+              {inCart ? "ADDED" : "ADD TO Cart"}
             </Button>
           </Box>
         </Box>
@@ -297,7 +297,7 @@ const Products = () => {
             <Grid item md={3} lg={2.5} sx={{ display: { xs: "none", md: "block" } }}>
               <Box sx={{ position: "sticky", top: 100 }}>
                 <Typography variant="h4" sx={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, color: THEME.black, mb: 4, lineHeight: 0.9 }}>
-                  THE<br />ARCHIVE
+                  THE<br />COLLECTIONS
                 </Typography>
                 <FilterSidebar
                   searchQuery={searchQuery} setSearchQuery={setSearchQuery}
@@ -308,7 +308,8 @@ const Products = () => {
             </Grid>
 
             {/* Mobile Drawer */}
-            <Drawer anchor="right" open={mobileOpen} onClose={() => setMobileOpen(false)} PaperProps={{ sx: { width: "80%", maxWidth: 350, p: 2 } }}>
+            <Drawer anchor="right" open={mobileOpen} onClose={() => setMobileOpen(false)} PaperProps={{ sx: {  borderTopLeftRadius: 30, 
+            borderBottomLeftRadius: 30,width: "45%", maxWidth: 350, p: 2 } }}>
               <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
                 <IconButton onClick={() => setMobileOpen(false)}><FaTimes /></IconButton>
               </Box>

@@ -299,10 +299,12 @@ const { navLinks, drawerLinks, displayName, shortName } = useMemo(() => {
                   switchToRegister={switchToRegister}
                   switchToForgot={switchToForgot}
                   onSuccess={() => {
-                    localStorage.setItem("showLoginLoader", "true"); // Trigger the luxury loader
-                    localStorage.setItem("premiumToast", "Logged in successfully! 🎉"); 
-                    window.location.reload(); 
-                  }}
+  localStorage.setItem("showLoginLoader", "true"); 
+  localStorage.setItem("premiumToast", "Logged in successfully! 🎉"); 
+  
+  // This replaces the current page in the history and forces a fresh load immediately
+  window.location.replace(window.location.pathname); 
+}}
                 />
               )}
 
@@ -310,10 +312,12 @@ const { navLinks, drawerLinks, displayName, shortName } = useMemo(() => {
                 <Register
                   switchToLogin={switchToLogin}
                   onSuccess={() => {
-                    localStorage.setItem("showLoginLoader", "true"); // Trigger the luxury loader
-                    localStorage.setItem("premiumToast", "Registered successfully! 🎉"); 
-                    window.location.reload();
-                  }}
+  localStorage.setItem("showLoginLoader", "true"); 
+  localStorage.setItem("premiumToast", "Register successfully! 🎉"); 
+  
+  // This replaces the current page in the history and forces a fresh load immediately
+  window.location.replace(window.location.pathname); 
+}}
                 />
               )}
 
@@ -330,11 +334,11 @@ const { navLinks, drawerLinks, displayName, shortName } = useMemo(() => {
         onClose={() => setDrawerOpen(false)} 
         PaperProps={{ 
           sx: { 
-            width: { xs: "57%", sm: 360 }, // FIXED: 85% width on mobile so it doesn't trap the screen
+            width: { xs: "56%", sm: 360 }, // FIXED: 85% width on mobile so it doesn't trap the screen
             maxWidth: 380,
             backgroundColor: "#4A2E2E", 
             color: "#D8B67B",
-borderTopLeftRadius: 30, 
+            borderTopLeftRadius: 30, 
             borderBottomLeftRadius: 30,
             borderLeft: "1px solid rgba(216, 182, 123, 0.15)", 
             boxShadow: "-15px 0px 40px rgba(0,0,0,0.6)"
